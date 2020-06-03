@@ -15,12 +15,63 @@ TITLE Strings to Signed Integers     (program6_933958778.asm)
 INCLUDE Irvine32.inc
 
 ; (insert macro definitions here)
+;--------------------------------------
+getString MACRO inputAddress, prompt
+;   Prompts user to input an integer,
+;	then stores as a string.
+;
+;	Preconditions: Do not use any of the 
+;	general purpose registers as arguments
+;
+;	Receives: Address for saving input,
+;	address of a prompt for the user
+;
+;	Returns: A saved string at the input address
+;
+;
+;--------------------------------------
+
+	;Save the registers
+	pushad
+
+	;Prompt for user input
+	mov		edx, prompt
+	call	WriteString
+
+	;Get the input from the user
+	mov		edx, inputAddress
+	mov		ecx, 32; ensure always null-terminated
+	call	ReadString
+
+	;Restore the registers
+	popad
+ENDM
 
 ; (insert constant definitions here)
 
 .data
 
 ; (insert variable definitions here)
+;Variables for introducing the programmer & farewell
+titleText	BYTE	"Strings to Signed Integers",0
+authName	BYTE	"Programmed by Andrew Helmsworth",0
+seeya		BYTE	"Thanks for stopping by, and have a nice day!",0
+
+;Variables for explaining EC
+ecOne		BYTE	"**EC: Line numbers and a running subtotal are displayed.",0
+
+;Variables used for program description
+descripA	BYTE	"This program will prompt you for 10 signed integers, validating your input.",0dh, 0ah, 0
+descripB	BYTE	"Integers must be appropriately sized for a 32-bit register.",0dh, 0ah, 0
+descripC	BYTE	"After valid input is received, a list of the entered numbers, their sum, and average will be displayed.",0
+
+;Variables for prompting for user input
+plsEnter	BYTE	"Please enter a signed integer: ",0
+tryAgain	BYTE	"Please try again: ",0
+
+;Variables for storing user input
+userInput	DWORD	33 DUP(0)
+
 
 .code
 ;--------------------------------------
@@ -51,9 +102,29 @@ main PROC
 ;--------------------------------------
 	;Push string offsets in reverse order
 	;as they are needed in introduction
+	push	OFFSET descripC
+	push	OFFSET descripB
+	push	OFFSET descripA
+	push	OFFSET ecOne
+	push	OFFSET authName
+	push	OFFSET titleText
 
+	;Introduce the program
+	call	introduction
+	call	CrLf
 
+;--------------------------------------
+;GET USER INPUT SECTION
+;getUserInput
+;
+;This section of the program gets 10
+;valid integers from the user.
+;--------------------------------------
 
+	getString OFFSET userInput, OFFSET plsEnter
+	call	CrLf
+	mov		edx, OFFSET userInput
+	call	WriteString
 ;--------------------------------------
 ;FAREWELL SECTION
 ;farewell
@@ -62,8 +133,8 @@ main PROC
 ;to the user.
 ;--------------------------------------
 	;push string address and call
-	push	OFFSET seeya
-	call	farewell
+	;push	OFFSET seeya
+	;call	farewell
 
 	;Used for error detection
 	pop		eax
@@ -79,13 +150,13 @@ introduction PROC
 ;
 ; Introduces program title and name
 ; of programmer, as well as extra credit
-; options and description.
+; option and description.
 ;
-; Preconditions: Title, author, 3 EC strings, description strings,
-; arraySize, HI, LO on stack
+; Preconditions: Title, author, EC string, description strings,
+; on stack
 ; Postconditions: Introduction and related strings output to screen
-; Receives: Title, author, 3 EC strings, description strings,
-; arraySize, HI, LO on stack
+; Receives: Title, author, EC string, description strings,
+; on stack
 ; Registers changed: eax, ecx, edx, ebp, esp, esi
 ;
 ; Returns: none
@@ -107,26 +178,39 @@ introduction PROC
 ;titleText	|	ebp + 8
 ;authName	|	ebp + 12
 ;ecOne		|	ebp + 16
-;ecTwo		|	ebp + 20
-;ecThree	|	ebp + 24
-;descripA	|	ebp + 28
-;descripAb	|	ebp + 32
-;descripB	|	ebp + 36
-;descripC	|	ebp + 40
-;descripD	|	ebp + 44
-;descripE	|	ebp + 48
-;descripF	|	ebp + 52
-;HI			|	ebp + 56
-;LO			|	ebp + 60
-;ARRAYSIZE	|	ebp + 64
+;descripA	|	ebp + 20
+;descripB	|	ebp + 24
+;descripC	|	ebp + 28
 ;--------------------------------------
+	;Introduce title
+	mov		edx, [ebp + 8]
+	call	WriteString
+	call	CrLf
 
+	;Introduce programmer
+	mov		edx, [ebp + 12]
+	call	WriteString
+	call	CrLf
+
+	;Specify EC option
+	mov		edx, [ebp + 16]
+	call	WriteString
+	call	CrLf
+
+	;List program description
+	mov		edx, [ebp + 20]
+	call	WriteString
+	mov		edx, [ebp + 24]
+	call	WriteString
+	mov		edx, [ebp + 28]
+	call	WriteString
+	call	CrLf
 
 	;Reset ebp -- esp never moved
 	pop		ebp
 
 	;Return but also clear stack
-	ret		60
+	ret		24
 
 introduction ENDP
 

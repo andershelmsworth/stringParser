@@ -1,11 +1,20 @@
-Microsoft (R) Macro Assembler Version 14.21.27702.2	    01/20/20 22:24:35
-1Add and Subtract, Version 2         (AddSub2.asm	     Page 1 - 1
+Microsoft (R) Macro Assembler Version 14.24.28315.0	    06/02/20 21:43:53
+7Strings to Signed Integers     (program6_933958778.asm	     Page 1 - 1
 
 
-				TITLE Add and Subtract, Version 2         (AddSub2.asm)
+				TITLE Strings to Signed Integers     (program6_933958778.asm)
 
-				; This program adds and subtracts 32-bit integers
-				; and stores the sum in a variable.
+				; Author: Andrew Helmsworth
+				; Last Modified: 2020/06/01
+				; OSU email address: helmswoa@oregonstate.edu
+				; Course number/section: 271-400
+				; Project Number: 6                Due Date: 2020/06/07
+				; Description: Macros are defined which use Irvine Library 
+				; procedures to read and write strings. These macros are used
+				; by writeVal and readVal to get signed numbers from the user,
+				; read it as a string, validate input, convert it to a signed integer
+				; and store in an array. The sum and average are calculated and written
+				; back as strings.
 
 				INCLUDE Irvine32.inc
 			      C ; Include file for Irvine32.lib             (Irvine32.inc)
@@ -26,30 +35,317 @@ Microsoft (R) Macro Assembler Version 14.21.27702.2	    01/20/20 22:24:35
 			      C .LIST
 			      C 
 
+				; (insert macro definitions here)
+				;--------------------------------------
+				getString MACRO inputAddress, prompt
+				;   Prompts user to input an integer,
+				;	then stores as a string.
+				;
+				;	Preconditions: Do not use any of the 
+				;	general purpose registers as arguments
+				;
+				;	Receives: Address for saving input,
+				;	address of a prompt for the user
+				;
+				;	Returns: A saved string at the input address
+				;
+				;
+				;--------------------------------------
+
+					;Save the registers
+					pushad
+
+					;Prompt for user input
+					mov		edx, prompt
+					call	WriteString
+
+					;Get the input from the user
+					mov		edx, inputAddress
+					mov		ecx, 32
+					call	ReadString
+
+					;Restore the registers
+					popad
+				ENDM
+
+				; (insert constant definitions here)
+
  00000000			.data
- 00000000 00010000		val1     dword  10000h
- 00000004 00040000		val2     dword  40000h
- 00000008 00020000		val3     dword  20000h
- 0000000C 00000000		finalVal dword  ?
+
+				; (insert variable definitions here)
+				;Variables for introducing the programmer & farewell
+ 00000000 53 74 72 69 6E	titleText	BYTE	"Strings to Signed Integers",0
+	   67 73 20 74 6F
+	   20 53 69 67 6E
+	   65 64 20 49 6E
+	   74 65 67 65 72
+	   73 00
+ 0000001B 50 72 6F 67 72	authName	BYTE	"Programmed by Andrew Helmsworth",0
+	   61 6D 6D 65 64
+	   20 62 79 20 41
+	   6E 64 72 65 77
+	   20 48 65 6C 6D
+	   73 77 6F 72 74
+	   68 00
+ 0000003B 54 68 61 6E 6B	seeya		BYTE	"Thanks for stopping by, and have a nice day!",0
+	   73 20 66 6F 72
+	   20 73 74 6F 70
+	   70 69 6E 67 20
+	   62 79 2C 20 61
+	   6E 64 20 68 61
+	   76 65 20 61 20
+	   6E 69 63 65 20
+	   64 61 79 21 00
+
+				;Variables for explaining EC
+ 00000068 2A 2A 45 43 3A	ecOne		BYTE	"**EC: Line numbers and a running subtotal are displayed.",0
+	   20 4C 69 6E 65
+	   20 6E 75 6D 62
+	   65 72 73 20 61
+	   6E 64 20 61 20
+	   72 75 6E 6E 69
+	   6E 67 20 73 75
+	   62 74 6F 74 61
+	   6C 20 61 72 65
+	   20 64 69 73 70
+	   6C 61 79 65 64
+	   2E 00
+
+				;Variables used for program description
+ 000000A1 54 68 69 73 20	descripA	BYTE	"This program will prompt you for 10 signed integers, validating your input.",0dh, 0ah, 0
+	   70 72 6F 67 72
+	   61 6D 20 77 69
+	   6C 6C 20 70 72
+	   6F 6D 70 74 20
+	   79 6F 75 20 66
+	   6F 72 20 31 30
+	   20 73 69 67 6E
+	   65 64 20 69 6E
+	   74 65 67 65 72
+	   73 2C 20 76 61
+	   6C 69 64 61 74
+	   69 6E 67 20 79
+	   6F 75 72 20 69
+	   6E 70 75 74 2E
+	   0D 0A 00
+ 000000EF 49 6E 74 65 67	descripB	BYTE	"Integers must be appropriately sized for a 32-bit register.",0dh, 0ah, 0
+	   65 72 73 20 6D
+	   75 73 74 20 62
+	   65 20 61 70 70
+	   72 6F 70 72 69
+	   61 74 65 6C 79
+	   20 73 69 7A 65
+	   64 20 66 6F 72
+	   20 61 20 33 32
+	   2D 62 69 74 20
+	   72 65 67 69 73
+	   74 65 72 2E 0D
+	   0A 00
+ 0000012D 41 66 74 65 72	descripC	BYTE	"After valid input is received, a list of the entered numbers, their sum, and average will be displayed.",0
+	   20 76 61 6C 69
+	   64 20 69 6E 70
+	   75 74 20 69 73
+	   20 72 65 63 65
+	   69 76 65 64 2C
+	   20 61 20 6C 69
+	   73 74 20 6F 66
+	   20 74 68 65 20
+	   65 6E 74 65 72
+	   65 64 20 6E 75
+	   6D 62 65 72 73
+	   2C 20 74 68 65
+	   69 72 20 73 75
+	   6D 2C 20 61 6E
+	   64 20 61 76 65
+	   72 61 67 65 20
+	   77 69 6C 6C 20
+	   62 65 20 64 69
+	   73 70 6C 61 79
+	   65 64 2E 00
+
+				;Variables for prompting for user input
+ 00000195 50 6C 65 61 73	plsEnter	BYTE	"Please enter a signed integer: ",0
+	   65 20 65 6E 74
+	   65 72 20 61 20
+	   73 69 67 6E 65
+	   64 20 69 6E 74
+	   65 67 65 72 3A
+	   20 00
+ 000001B5 50 6C 65 61 73	tryAgain	BYTE	"Please try again: ",0
+	   65 20 74 72 79
+	   20 61 67 61 69
+	   6E 3A 20 00
+
+				;Variables for storing user input
+ 000001C8  00000021 [		userInput	DWORD	33 DUP(0)
+	    00000000
+	   ]
+
 
  00000000			.code
+				;--------------------------------------
  00000000			main PROC
+				;
+				; Parses user input as a string to an int, prints sum and average
+				; and validates input
+				;
+				; Preconditions: none
+				; Postconditions: Input prompts, sum, average output to screen
+				; Receives: none
+				; Registers changed: esp
+				; Registers changed (through called procs):
+				; eax, ebx, ecx, edx, esi, edi, esp, ebp
+				;
+				; Returns: none
+				;
+				;--------------------------------------
+				; Used for error detection
+ 00000000  6A 2F			push	47
+				;--------------------------------------
+				;INTRODUCTION SECTION
+				;introduction
+				;
+				;This section of the program
+				;introduces the programmer and
+				;title.
+				;--------------------------------------
+					;Push string offsets in reverse order
+					;as they are needed in introduction
+ 00000002  68 0000012D R		push	OFFSET descripC
+ 00000007  68 000000EF R		push	OFFSET descripB
+ 0000000C  68 000000A1 R		push	OFFSET descripA
+ 00000011  68 00000068 R		push	OFFSET ecOne
+ 00000016  68 0000001B R		push	OFFSET authName
+ 0000001B  68 00000000 R		push	OFFSET titleText
 
- 00000000  A1 00000000 R		mov	eax,val1			; start with 10000h
- 00000005  03 05 00000004 R		add	eax,val2			; add 40000h
- 0000000B  2B 05 00000008 R		sub	eax,val3			; subtract 20000h
- 00000011  A3 0000000C R		mov	finalVal,eax		; store the result (30000h)
- 00000016  E8 00000000 E		call	DumpRegs			; display the registers
+					;Introduce the program
+ 00000020  E8 0000003C			call	introduction
+ 00000025  E8 00000000 E		call	CrLf
 
-					exit
- 0000001B  6A 00	   *	    push   +000000000h
- 0000001D  E8 00000000 E   *	    call   ExitProcess
- 00000022			main ENDP
+				;--------------------------------------
+				;GET USER INPUT SECTION
+				;getUserInput
+				;
+				;This section of the program gets 10
+				;valid integers from the user.
+				;--------------------------------------
+
+					getString OFFSET userInput, OFFSET plsEnter
+ 0000002A  60		     1		pushad
+ 0000002B  BA 00000195 R     1		mov		edx, OFFSET plsEnter
+ 00000030  E8 00000000 E     1		call	WriteString
+ 00000035  BA 000001C8 R     1		mov		edx, OFFSET userInput
+ 0000003A  B9 00000020	     1		mov		ecx, 32
+ 0000003F  E8 00000000 E     1		call	ReadString
+ 00000044  61		     1		popad
+ 00000045  E8 00000000 E		call	CrLf
+ 0000004A  BA 000001C8 R		mov		edx, OFFSET userInput
+ 0000004F  E8 00000000 E		call	WriteString
+				;--------------------------------------
+				;FAREWELL SECTION
+				;farewell
+				;
+				;This section of the program bids farewell
+				;to the user.
+				;--------------------------------------
+					;push string address and call
+					;push	OFFSET seeya
+					;call	farewell
+
+					;Used for error detection
+ 00000054  58				pop		eax
+					;call	WriteDec
+ 00000055  E8 00000000 E		call	CrLf
+
+					exit	; exit to operating system
+ 0000005A  6A 00	   *	    push   +000000000h
+ 0000005C  E8 00000000 E   *	    call   ExitProcess
+ 00000061			main ENDP
+
+				; (insert additional procedures here)
+				;--------------------------------------
+ 00000061			introduction PROC
+				;
+				; Introduces program title and name
+				; of programmer, as well as extra credit
+				; option and description.
+				;
+				; Preconditions: Title, author, EC string, description strings,
+				; on stack
+				; Postconditions: Introduction and related strings output to screen
+				; Receives: Title, author, EC string, description strings,
+				; on stack
+				; Registers changed: eax, ecx, edx, ebp, esp, esi
+				;
+				; Returns: none
+				;
+				;--------------------------------------
+
+					;Save ebp and set the base pointer
+ 00000061  55				push	ebp
+ 00000062  8B EC			mov		ebp, esp
+
+				;--------------------------------------
+				; CITATION: Concept learned from reference:
+				; https://piazza.com/class/k83uhw9nnyd2y9?cid=278
+				;--------------------------------------
+				;; STACK FRAME CONTENTS
+				; 
+				;old ebp	|	ebp <-(Also esp)
+				;return @	|	ebp + 4
+				;titleText	|	ebp + 8
+				;authName	|	ebp + 12
+				;ecOne		|	ebp + 16
+				;descripA	|	ebp + 20
+				;descripB	|	ebp + 24
+				;descripC	|	ebp + 28
+				;--------------------------------------
+					;Introduce title
+ 00000064  8B 55 08			mov		edx, [ebp + 8]
+ 00000067  E8 00000000 E		call	WriteString
+ 0000006C  E8 00000000 E		call	CrLf
+
+					;Introduce programmer
+ 00000071  8B 55 0C			mov		edx, [ebp + 12]
+ 00000074  E8 00000000 E		call	WriteString
+ 00000079  E8 00000000 E		call	CrLf
+
+					;Specify EC option
+ 0000007E  8B 55 10			mov		edx, [ebp + 16]
+ 00000081  E8 00000000 E		call	WriteString
+ 00000086  E8 00000000 E		call	CrLf
+
+					;List program description
+ 0000008B  8B 55 14			mov		edx, [ebp + 20]
+ 0000008E  E8 00000000 E		call	WriteString
+ 00000093  8B 55 18			mov		edx, [ebp + 24]
+ 00000096  E8 00000000 E		call	WriteString
+ 0000009B  8B 55 1C			mov		edx, [ebp + 28]
+ 0000009E  E8 00000000 E		call	WriteString
+ 000000A3  E8 00000000 E		call	CrLf
+
+					;Reset ebp -- esp never moved
+ 000000A8  5D				pop		ebp
+
+					;Return but also clear stack
+ 000000A9  C2 0018			ret		24
+
+ 000000AC			introduction ENDP
+
+				; (insert additional procedures here)
+
 				END main
-Microsoft (R) Macro Assembler Version 14.21.27702.2	    01/20/20 22:24:35
-1Add and Subtract, Version 2         (AddSub2.asm	     Symbols 2 - 1
+Microsoft (R) Macro Assembler Version 14.24.28315.0	    06/02/20 21:43:53
+7Strings to Signed Integers     (program6_933958778.asm	     Symbols 2 - 1
 
 
+
+
+Macros:
+
+                N a m e                 Type
+
+getString  . . . . . . . . . . .	Proc
 
 
 Structures and Unions:
@@ -140,8 +436,8 @@ Segments and Groups:
 
 FLAT . . . . . . . . . . . . . .	GROUP
 STACK  . . . . . . . . . . . . .	32 Bit	 00001000 Para	  Stack	  'STACK'	 
-_DATA  . . . . . . . . . . . . .	32 Bit	 00000010 Para	  Public  'DATA'	
-_TEXT  . . . . . . . . . . . . .	32 Bit	 00000022 Para	  Public  'CODE'	
+_DATA  . . . . . . . . . . . . .	32 Bit	 0000024C Para	  Public  'DATA'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 000000AC Para	  Public  'CODE'	
 
 
 Procedures, parameters, and locals:
@@ -248,7 +544,8 @@ WriteStackFrame  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External
 WriteString  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteToFile  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteWindowsMsg  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
-main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 00000022 Public STDCALL
+introduction . . . . . . . . . .	P Near	 00000061 _TEXT	Length= 0000004B Public STDCALL
+main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 00000061 Public STDCALL
 printf . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 scanf  . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 wsprintfA  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
@@ -467,12 +764,16 @@ VK_UP  . . . . . . . . . . . . .	Number	 00000026h
 WINDOW_BUFFER_SIZE_EVENT . . . .	Number	 00000004h   
 WriteConsoleOutputCharacter  . .	Text   	 WriteConsoleOutputCharacterA
 WriteConsole . . . . . . . . . .	Text   	 WriteConsoleA
+authName . . . . . . . . . . . .	Byte	 0000001B _DATA	
 black  . . . . . . . . . . . . .	Number	 00000000h   
 blue . . . . . . . . . . . . . .	Number	 00000001h   
 brown  . . . . . . . . . . . . .	Number	 00000006h   
 cyan . . . . . . . . . . . . . .	Number	 00000003h   
+descripA . . . . . . . . . . . .	Byte	 000000A1 _DATA	
+descripB . . . . . . . . . . . .	Byte	 000000EF _DATA	
+descripC . . . . . . . . . . . .	Byte	 0000012D _DATA	
+ecOne  . . . . . . . . . . . . .	Byte	 00000068 _DATA	
 exit . . . . . . . . . . . . . .	Text   	 INVOKE ExitProcess,0
-finalVal . . . . . . . . . . . .	DWord	 0000000C _DATA	
 gray . . . . . . . . . . . . . .	Number	 00000008h   
 green  . . . . . . . . . . . . .	Number	 00000002h   
 lightBlue  . . . . . . . . . . .	Number	 00000009h   
@@ -482,10 +783,12 @@ lightGreen . . . . . . . . . . .	Number	 0000000Ah
 lightMagenta . . . . . . . . . .	Number	 0000000Dh   
 lightRed . . . . . . . . . . . .	Number	 0000000Ch   
 magenta  . . . . . . . . . . . .	Number	 00000005h   
+plsEnter . . . . . . . . . . . .	Byte	 00000195 _DATA	
 red  . . . . . . . . . . . . . .	Number	 00000004h   
-val1 . . . . . . . . . . . . . .	DWord	 00000000 _DATA	
-val2 . . . . . . . . . . . . . .	DWord	 00000004 _DATA	
-val3 . . . . . . . . . . . . . .	DWord	 00000008 _DATA	
+seeya  . . . . . . . . . . . . .	Byte	 0000003B _DATA	
+titleText  . . . . . . . . . . .	Byte	 00000000 _DATA	
+tryAgain . . . . . . . . . . . .	Byte	 000001B5 _DATA	
+userInput  . . . . . . . . . . .	DWord	 000001C8 _DATA	
 white  . . . . . . . . . . . . .	Number	 0000000Fh   
 wsprintf . . . . . . . . . . . .	Text   	 wsprintfA
 yellow . . . . . . . . . . . . .	Number	 0000000Eh   
