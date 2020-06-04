@@ -70,8 +70,12 @@ plsEnter	BYTE	"Please enter a signed integer: ",0
 tryAgain	BYTE	"Please try again: ",0
 
 ;Variables for storing user input
-userInput	DWORD	33 DUP(0)
-
+userInput	BYTE	33 DUP(0)
+validInt	DWORD	?
+isNeg		DWORD	0
+minus		BYTE	"-"
+plus		BYTE	"+"
+emptyStr	BYTE	33 DUP(0)
 
 .code
 ;--------------------------------------
@@ -121,10 +125,23 @@ main PROC
 ;valid integers from the user.
 ;--------------------------------------
 
-	getString OFFSET userInput, OFFSET plsEnter
-	call	CrLf
-	mov		edx, OFFSET userInput
-	call	WriteString
+	;Push user input offsets in the reverse
+	;order that they are needed in the proc
+	push	OFFSET emptyStr
+	push	OFFSET minus
+	push	OFFSET plus
+	push	OFFSET isNeg
+	push	OFFSET validInt
+	push	OFFSET userInput
+	push	OFFSET tryAgain
+	push	OFFSET plsEnter
+
+	;Get a value
+	call	readVal
+	;call	CrLf
+	mov		eax, OFFSET validInt
+	call	WriteInt
+
 ;--------------------------------------
 ;FAREWELL SECTION
 ;farewell
@@ -213,6 +230,157 @@ introduction PROC
 	ret		24
 
 introduction ENDP
+
+; (insert additional procedures here)
+;--------------------------------------
+readVal PROC
+;
+; Gets and validates a signed integer from the user.
+;
+; Preconditions: userInput, validInt on stack
+; Postconditions: valid integer in validInt
+; Receives: userInput string on stack
+; Registers changed: eax, ecx, edx, ebp, esp, esi
+;
+; Returns: valid integer in validInt
+;
+;--------------------------------------
+
+	;Save ebp and set the base pointer
+	push	ebp
+	mov		ebp, esp
+
+;--------------------------------------
+; CITATION: Concept learned from reference:
+; https://piazza.com/class/k83uhw9nnyd2y9?cid=278
+;--------------------------------------
+;; STACK FRAME CONTENTS
+; 
+;old ebp	|	ebp <-(Also esp)
+;return @	|	ebp + 4
+;plsEnter	|	ebp + 8
+;tryAgain	|	ebp + 12
+;userInput	|	ebp + 16
+;validInt	|	ebp + 20
+;isNeg		|	ebp + 24
+;plus		|	ebp + 28
+;minus		|	ebp + 32
+;emptyStr	|	ebp + 36
+;--------------------------------------
+	;Skip over invalid unless jumped to
+	jmp		initRead
+
+invalidEntry:	
+	;Input was invalid
+	;Clear the input string
+	INVOKE	Str_copy, [ebp + 36], [ebp + 16]
+
+	;Initialize validInt, isNeg, clear direction
+	mov		DWORD PTR [ebp + 20], 0
+	mov		DWORD PTR [ebp + 24], 0
+	cld
+
+	;Get input from user
+	getString [ebp + 16], [ebp + 12]
+	call	CrLf
+
+	;skip inital prompt
+	jmp		firstByte
+
+initRead:
+	;Get input from user
+	getString [ebp + 16], [ebp + 8]
+	call	CrLf
+	
+	;Initialize validInt, isNeg, clear direction
+	mov		DWORD PTR [ebp + 20], 0
+	mov		DWORD PTR [ebp + 24], 0
+	cld
+
+firstByte:
+	;Set esi, direction, reinit isNeg
+	mov		esi, [ebp + 16]
+	mov		DWORD PTR[ebp + 24], 0
+
+	;Get the first byte, zero-extend
+	lodsb
+	movzx	eax, al
+
+	;Check to see if it's a negative sign
+	cmp		eax, 45
+	jz		negFound
+
+	;Check to see if it's a positive sign
+	cmp		eax, 43
+	jz		posFound
+
+	;No sign, checking this byte in range
+	sub		eax, 48
+	cmp		eax, 0; lower than zero?
+	jb		invalidEntry
+	cmp		eax, 9;greater than 9?
+	ja		invalidEntry
+
+	;Was a digit, proceeding
+	add		[ebp + 20], eax
+	jmp		keepReading
+
+negFound:
+	;set boolean and continue
+	mov		DWORD PTR [ebp + 24], 1
+	jmp		keepReading
+
+posFound:
+	;set boolean and continue
+	mov		DWORD PTR [ebp + 24], 0
+	jmp		keepReading
+
+keepReading:
+	;Multiply to next dec place
+	mov		ebx, 10
+	mov		eax, [ebp + 20]
+	mul		ebx
+	mov		[ebp + 20], eax
+
+	;get the next byte, zero-extend
+	lodsb
+	movzx	eax, al
+
+	;Check if null char
+	cmp		eax, 0
+	jz		endRead
+
+	;checking this byte in range
+	sub		eax, 48
+	cmp		eax, 0; lower than zero?
+	jb		invalidEntry
+	cmp		eax, 9;greater than 9?
+	ja		invalidEntry
+
+	;Is a digit, adding to running total
+	mov		ebx, [ebp + 20]
+	add		eax, ebx
+	mov		[ebp + 20], eax
+
+	;continue
+	jmp		keepReading
+	
+endRead:
+	;back off the last decimal escalation
+	mov		ebx, 10
+	mov		eax, [ebp + 20]
+	div		ebx
+	mov		[ebp + 20], eax
+
+	;Valid int is now saved in validInt
+
+	;reset ebp and clear stack
+	pop		ebp
+
+	ret 32
+readVal	 ENDP
+
+
 
 ; (insert additional procedures here)
 
