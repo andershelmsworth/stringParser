@@ -67,7 +67,8 @@ descripC	BYTE	"After valid input is received, a list of the entered numbers, the
 
 ;Variables for prompting for user input
 plsEnter	BYTE	"Please enter a signed integer: ",0
-tryAgain	BYTE	"Please try again: ",0
+tryAgain	BYTE	"Error! You didn't enter a signed int, or you overflowed the register.",0dh, 0ah
+			BYTE	"Please try again: ",0
 
 ;Variables for storing user input
 userInput	BYTE	33 DUP(0)
@@ -139,8 +140,10 @@ main PROC
 	;Get a value
 	call	readVal
 	;call	CrLf
-	mov		eax, OFFSET validInt
+	mov		eax, validInt
 	call	WriteInt
+	call	CrLf
+	call	CrLf
 
 ;--------------------------------------
 ;FAREWELL SECTION
@@ -155,7 +158,7 @@ main PROC
 
 	;Used for error detection
 	pop		eax
-	;call	WriteDec
+	call	WriteDec
 	call	CrLf
 
 	exit	; exit to operating system
@@ -276,8 +279,11 @@ invalidEntry:
 	INVOKE	Str_copy, [ebp + 36], [ebp + 16]
 
 	;Initialize validInt, isNeg, clear direction
-	mov		DWORD PTR [ebp + 20], 0
-	mov		DWORD PTR [ebp + 24], 0
+	mov		edi, [ebp + 20]
+	mov		eax, 0
+	mov		[edi], eax
+	mov		edi, [ebp + 24]
+	mov		[edi], eax
 	cld
 
 	;Get input from user
@@ -293,14 +299,19 @@ initRead:
 	call	CrLf
 	
 	;Initialize validInt, isNeg, clear direction
-	mov		DWORD PTR [ebp + 20], 0
-	mov		DWORD PTR [ebp + 24], 0
+	mov		eax, 0
+	mov		edi, [ebp + 20]
+	mov		[edi], eax
+	mov		edi, [ebp + 24]
+	mov		[edi], eax
 	cld
 
 firstByte:
 	;Set esi, direction, reinit isNeg
 	mov		esi, [ebp + 16]
-	mov		DWORD PTR[ebp + 24], 0
+	mov		eax, 0
+	mov		edi, [ebp + 24]
+	mov		[edi], eax
 
 	;Get the first byte, zero-extend
 	lodsb
@@ -322,25 +333,31 @@ firstByte:
 	ja		invalidEntry
 
 	;Was a digit, proceeding
-	add		[ebp + 20], eax
+	mov		edi, [ebp + 20]
+	add		[edi], eax
 	jmp		keepReading
 
 negFound:
 	;set boolean and continue
-	mov		DWORD PTR [ebp + 24], 1
+	mov		edi, [ebp + 24]
+	mov		eax, 1
+	mov		[edi], eax
 	jmp		keepReading
 
 posFound:
 	;set boolean and continue
-	mov		DWORD PTR [ebp + 24], 0
+	mov		edi, [ebp + 24]
+	mov		eax, 0
+	mov		[edi], eax
 	jmp		keepReading
 
 keepReading:
 	;Multiply to next dec place
 	mov		ebx, 10
-	mov		eax, [ebp + 20]
+	mov		edi, [ebp + 20]
+	mov		eax, [edi]
 	mul		ebx
-	mov		[ebp + 20], eax
+	mov		[edi], eax
 
 	;get the next byte, zero-extend
 	lodsb
@@ -358,9 +375,14 @@ keepReading:
 	ja		invalidEntry
 
 	;Is a digit, adding to running total
-	mov		ebx, [ebp + 20]
+	mov		edi, [ebp + 20]
+	mov		ebx, [edi]
 	add		eax, ebx
-	mov		[ebp + 20], eax
+
+	;check overflow
+	jo		invalidEntry
+	mov		edi, [ebp + 20]
+	mov		[edi], eax
 
 	;continue
 	jmp		keepReading
@@ -368,15 +390,30 @@ keepReading:
 endRead:
 	;back off the last decimal escalation
 	mov		ebx, 10
-	mov		eax, [ebp + 20]
+	mov		edi, [ebp + 20]
+	mov		eax, [edi]
 	div		ebx
-	mov		[ebp + 20], eax
+	mov		[edi], eax
 
 	;Valid int is now saved in validInt
+	;now we need to check sign
 
+	mov		edi, [ebp + 24]
+	mov		eax, 1
+	cmp		[edi], eax
+	jz		complement
+	jmp		endReadVal
+
+complement:
+	;get two's complement of validInt
+	mov		edi, [ebp + 20]
+	mov		eax, [edi]
+	neg		eax
+	mov		[edi], eax
+
+endReadVal:
 	;reset ebp and clear stack
 	pop		ebp
-
 	ret 32
 readVal	 ENDP
 
