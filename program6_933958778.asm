@@ -361,6 +361,7 @@ keepReading:
 	mov		edi, [ebp + 28]
 	mov		eax, [edi]
 	mul		ebx
+	jc		invalidEntry
 	mov		[edi], eax
 
 	;get the next byte, zero-extend
@@ -384,7 +385,7 @@ keepReading:
 	add		eax, ebx
 
 	;check overflow
-	jo		invalidEntry
+	jc		invalidEntry
 	mov		edi, [ebp + 28]
 	mov		[edi], eax
 

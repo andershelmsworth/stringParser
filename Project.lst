@@ -1,4 +1,4 @@
-Microsoft (R) Macro Assembler Version 14.24.28315.0	    06/04/20 21:32:23
+Microsoft (R) Macro Assembler Version 14.24.28315.0	    06/04/20 21:55:19
 7Strings to Signed Integers     (program6_933958778.asm	     Page 1 - 1
 
 
@@ -269,7 +269,7 @@ Microsoft (R) Macro Assembler Version 14.24.28315.0	    06/04/20 21:32:23
  00000057  68 00000195 R		push	OFFSET plsEnter
 
 					;Get 10 values
- 0000005C  E8 00000182			call	getNumbers
+ 0000005C  E8 00000188			call	getNumbers
  00000061  E8 00000000 E		call	CrLf
 
 				;--------------------------------------
@@ -507,68 +507,69 @@ Microsoft (R) Macro Assembler Version 14.24.28315.0	    06/04/20 21:32:23
  00000181  8B 7D 1C			mov		edi, [ebp + 28]
  00000184  8B 07			mov		eax, [edi]
  00000186  F7 E3			mul		ebx
- 00000188  89 07			mov		[edi], eax
+ 00000188  0F 82 FFFFFF3A		jc		invalidEntry
+ 0000018E  89 07			mov		[edi], eax
 
 					;get the next byte, zero-extend
- 0000018A  AC				lodsb
- 0000018B  0F B6 C0			movzx	eax, al
+ 00000190  AC				lodsb
+ 00000191  0F B6 C0			movzx	eax, al
 
 					;Check if null char
- 0000018E  83 F8 00			cmp		eax, 0
- 00000191  74 29			jz		endRead
+ 00000194  83 F8 00			cmp		eax, 0
+ 00000197  74 29			jz		endRead
 
 					;checking this byte in range
- 00000193  83 E8 30			sub		eax, 48
- 00000196  83 F8 00			cmp		eax, 0; lower than zero?
- 00000199  0F 82 FFFFFF29		jb		invalidEntry
- 0000019F  83 F8 09			cmp		eax, 9;greater than 9?
- 000001A2  0F 87 FFFFFF20		ja		invalidEntry
+ 00000199  83 E8 30			sub		eax, 48
+ 0000019C  83 F8 00			cmp		eax, 0; lower than zero?
+ 0000019F  0F 82 FFFFFF23		jb		invalidEntry
+ 000001A5  83 F8 09			cmp		eax, 9;greater than 9?
+ 000001A8  0F 87 FFFFFF1A		ja		invalidEntry
 
 					;Is a digit, adding to running total
- 000001A8  8B 7D 1C			mov		edi, [ebp + 28]
- 000001AB  8B 1F			mov		ebx, [edi]
- 000001AD  03 C3			add		eax, ebx
+ 000001AE  8B 7D 1C			mov		edi, [ebp + 28]
+ 000001B1  8B 1F			mov		ebx, [edi]
+ 000001B3  03 C3			add		eax, ebx
 
 					;check overflow
- 000001AF  0F 80 FFFFFF13		jo		invalidEntry
- 000001B5  8B 7D 1C			mov		edi, [ebp + 28]
- 000001B8  89 07			mov		[edi], eax
+ 000001B5  0F 82 FFFFFF0D		jc		invalidEntry
+ 000001BB  8B 7D 1C			mov		edi, [ebp + 28]
+ 000001BE  89 07			mov		[edi], eax
 
 					;continue
- 000001BA  EB C0			jmp		keepReading
+ 000001C0  EB BA			jmp		keepReading
 					
- 000001BC			endRead:
+ 000001C2			endRead:
 					;back off the last decimal escalation
- 000001BC  BB 0000000A			mov		ebx, 10
- 000001C1  8B 7D 1C			mov		edi, [ebp + 28]
- 000001C4  8B 07			mov		eax, [edi]
- 000001C6  F7 F3			div		ebx
- 000001C8  89 07			mov		[edi], eax
+ 000001C2  BB 0000000A			mov		ebx, 10
+ 000001C7  8B 7D 1C			mov		edi, [ebp + 28]
+ 000001CA  8B 07			mov		eax, [edi]
+ 000001CC  F7 F3			div		ebx
+ 000001CE  89 07			mov		[edi], eax
 
 					;Valid int is now saved in validInt
 					;now we need to check sign
 
- 000001CA  8B 7D 20			mov		edi, [ebp + 32]
- 000001CD  B8 00000001			mov		eax, 1
- 000001D2  39 07			cmp		[edi], eax
- 000001D4  74 02			jz		complement
- 000001D6  EB 09			jmp		endReadVal
+ 000001D0  8B 7D 20			mov		edi, [ebp + 32]
+ 000001D3  B8 00000001			mov		eax, 1
+ 000001D8  39 07			cmp		[edi], eax
+ 000001DA  74 02			jz		complement
+ 000001DC  EB 09			jmp		endReadVal
 
- 000001D8			complement:
+ 000001DE			complement:
 					;get two's complement of validInt
- 000001D8  8B 7D 1C			mov		edi, [ebp + 28]
- 000001DB  8B 07			mov		eax, [edi]
- 000001DD  F7 D8			neg		eax
- 000001DF  89 07			mov		[edi], eax
+ 000001DE  8B 7D 1C			mov		edi, [ebp + 28]
+ 000001E1  8B 07			mov		eax, [edi]
+ 000001E3  F7 D8			neg		eax
+ 000001E5  89 07			mov		[edi], eax
 
- 000001E1			endReadVal:
+ 000001E7			endReadVal:
 					;reset ebp, registers and leave stack for next proc
- 000001E1  5D				pop		ebp
- 000001E2  C3				ret
- 000001E3			readVal ENDP
+ 000001E7  5D				pop		ebp
+ 000001E8  C3				ret
+ 000001E9			readVal ENDP
 
 				;--------------------------------------
- 000001E3			getNumbers PROC
+ 000001E9			getNumbers PROC
 				;
 				; Stores 10 valid ints from the user
 
@@ -582,8 +583,8 @@ Microsoft (R) Macro Assembler Version 14.24.28315.0	    06/04/20 21:32:23
 				;--------------------------------------
 
 					;Save ebp and set the base pointer
- 000001E3  55				push	ebp
- 000001E4  8B EC			mov		ebp, esp
+ 000001E9  55				push	ebp
+ 000001EA  8B EC			mov		ebp, esp
 
 				;--------------------------------------
 				; CITATION: Concept learned from reference:
@@ -605,64 +606,64 @@ Microsoft (R) Macro Assembler Version 14.24.28315.0	    06/04/20 21:32:23
 				;arrayCount	|	ebp + 44
 				;--------------------------------------
 					;initialize counter and edi
- 000001E6  8B 5D 2C			mov		ebx, [ebp + 44]
- 000001E9  B8 0000000A			mov		eax, 10
- 000001EE  89 03			mov		[ebx], eax
+ 000001EC  8B 5D 2C			mov		ebx, [ebp + 44]
+ 000001EF  B8 0000000A			mov		eax, 10
+ 000001F4  89 03			mov		[ebx], eax
 
- 000001F0			getMore:
+ 000001F6			getMore:
 					;Get next value
- 000001F0  E8 FFFFFECE			call	readVal
+ 000001F6  E8 FFFFFEC8			call	readVal
 
 					;get validInt
- 000001F5  8B 75 14			mov		esi, [ebp + 20]
+ 000001FB  8B 75 14			mov		esi, [ebp + 20]
 
 					;save to array and increment
 					;subtract arrayCount from 10
- 000001F8  B8 0000000A			mov		eax, 10
- 000001FD  8B 7D 2C			mov		edi, [ebp + 44]
- 00000200  2B 07			sub		eax, [edi]
- 00000202  BB 00000004			mov		ebx, 4
+ 000001FE  B8 0000000A			mov		eax, 10
+ 00000203  8B 7D 2C			mov		edi, [ebp + 44]
+ 00000206  2B 07			sub		eax, [edi]
+ 00000208  BB 00000004			mov		ebx, 4
 
 					;multiply by four
- 00000207  F7 E3			mul		ebx
- 00000209  8B 7D 28			mov		edi, [ebp + 40]
+ 0000020D  F7 E3			mul		ebx
+ 0000020F  8B 7D 28			mov		edi, [ebp + 40]
 
 					;add this offset to edi
- 0000020C  03 F8			add		edi, eax
- 0000020E  8B 75 14			mov		esi, [ebp + 20]
- 00000211  8B 06			mov		eax, [esi]
+ 00000212  03 F8			add		edi, eax
+ 00000214  8B 75 14			mov		esi, [ebp + 20]
+ 00000217  8B 06			mov		eax, [esi]
 
 					;save valid int
- 00000213  89 07			mov		[edi], eax
+ 00000219  89 07			mov		[edi], eax
 
 					;continue to fill array
- 00000215  8B 5D 2C			mov		ebx, [ebp + 44]
- 00000218  B8 00000001			mov		eax, 1
- 0000021D  29 03			sub		[ebx], eax; sub 1 from arrayCount
- 0000021F  B8 00000000			mov		eax, 0
- 00000224  39 03			cmp		[ebx], eax
- 00000226  75 C8			jnz		getMore
+ 0000021B  8B 5D 2C			mov		ebx, [ebp + 44]
+ 0000021E  B8 00000001			mov		eax, 1
+ 00000223  29 03			sub		[ebx], eax; sub 1 from arrayCount
+ 00000225  B8 00000000			mov		eax, 0
+ 0000022A  39 03			cmp		[ebx], eax
+ 0000022C  75 C8			jnz		getMore
 
- 00000228  B9 0000000A			mov		ecx, 10
- 0000022D  8B 75 28			mov		esi, [ebp + 40]
- 00000230			printEm:
+ 0000022E  B9 0000000A			mov		ecx, 10
+ 00000233  8B 75 28			mov		esi, [ebp + 40]
+ 00000236			printEm:
 					;Write the integers in array
- 00000230  8B 06			mov		eax, [esi]
- 00000232  E8 00000000 E		call	WriteInt
- 00000237  83 C6 04			add		esi, 4
- 0000023A  E8 00000000 E		call	CrLf
- 0000023F  E2 EF			loop	printEm
+ 00000236  8B 06			mov		eax, [esi]
+ 00000238  E8 00000000 E		call	WriteInt
+ 0000023D  83 C6 04			add		esi, 4
+ 00000240  E8 00000000 E		call	CrLf
+ 00000245  E2 EF			loop	printEm
 
 					;return ebp to initial value
- 00000241  5D				pop		ebp
+ 00000247  5D				pop		ebp
 
- 00000242  C2 0028			ret 40
- 00000245			getNumbers ENDP
+ 00000248  C2 0028			ret 40
+ 0000024B			getNumbers ENDP
 
 				; (insert additional procedures here)
 
 				END main
-Microsoft (R) Macro Assembler Version 14.24.28315.0	    06/04/20 21:32:23
+Microsoft (R) Macro Assembler Version 14.24.28315.0	    06/04/20 21:55:19
 7Strings to Signed Integers     (program6_933958778.asm	     Symbols 2 - 1
 
 
@@ -764,7 +765,7 @@ Segments and Groups:
 FLAT . . . . . . . . . . . . . .	GROUP
 STACK  . . . . . . . . . . . . .	32 Bit	 00001000 Para	  Stack	  'STACK'	 
 _DATA  . . . . . . . . . . . . .	32 Bit	 00000287 Para	  Public  'DATA'	
-_TEXT  . . . . . . . . . . . . .	32 Bit	 00000245 Para	  Public  'CODE'	
+_TEXT  . . . . . . . . . . . . .	32 Bit	 0000024B Para	  Public  'CODE'	
 
 
 Procedures, parameters, and locals:
@@ -871,22 +872,22 @@ WriteStackFrame  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External
 WriteString  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteToFile  . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
 WriteWindowsMsg  . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External STDCALL
-getNumbers . . . . . . . . . . .	P Near	 000001E3 _TEXT	Length= 00000062 Public STDCALL
-  getMore  . . . . . . . . . . .	L Near	 000001F0 _TEXT	
-  printEm  . . . . . . . . . . .	L Near	 00000230 _TEXT	
+getNumbers . . . . . . . . . . .	P Near	 000001E9 _TEXT	Length= 00000062 Public STDCALL
+  getMore  . . . . . . . . . . .	L Near	 000001F6 _TEXT	
+  printEm  . . . . . . . . . . .	L Near	 00000236 _TEXT	
 introduction . . . . . . . . . .	P Near	 00000078 _TEXT	Length= 0000004B Public STDCALL
 main . . . . . . . . . . . . . .	P Near	 00000000 _TEXT	Length= 00000078 Public STDCALL
 printf . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
-readVal  . . . . . . . . . . . .	P Near	 000000C3 _TEXT	Length= 00000120 Public STDCALL
+readVal  . . . . . . . . . . . .	P Near	 000000C3 _TEXT	Length= 00000126 Public STDCALL
   invalidEntry . . . . . . . . .	L Near	 000000C8 _TEXT	
   initRead . . . . . . . . . . .	L Near	 00000101 _TEXT	
   firstByte  . . . . . . . . . .	L Near	 0000012D _TEXT	
   negFound . . . . . . . . . . .	L Near	 00000164 _TEXT	
   posFound . . . . . . . . . . .	L Near	 00000170 _TEXT	
   keepReading  . . . . . . . . .	L Near	 0000017C _TEXT	
-  endRead  . . . . . . . . . . .	L Near	 000001BC _TEXT	
-  complement . . . . . . . . . .	L Near	 000001D8 _TEXT	
-  endReadVal . . . . . . . . . .	L Near	 000001E1 _TEXT	
+  endRead  . . . . . . . . . . .	L Near	 000001C2 _TEXT	
+  complement . . . . . . . . . .	L Near	 000001DE _TEXT	
+  endReadVal . . . . . . . . . .	L Near	 000001E7 _TEXT	
 scanf  . . . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 wsprintfA  . . . . . . . . . . .	P Near	 00000000 FLAT	Length= 00000000 External C
 
