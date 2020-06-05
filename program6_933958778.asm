@@ -77,6 +77,8 @@ isNeg		DWORD	0
 minus		BYTE	"-"
 plus		BYTE	"+"
 emptyStr	BYTE	33 DUP(0)
+intArray	SDWORD	10 DUP(?)
+arrayCount	DWORD	10
 
 .code
 ;--------------------------------------
@@ -128,6 +130,8 @@ main PROC
 
 	;Push user input offsets in the reverse
 	;order that they are needed in the proc
+	push	OFFSET arrayCount
+	push	OFFSET intArray
 	push	OFFSET emptyStr
 	push	OFFSET minus
 	push	OFFSET plus
@@ -137,12 +141,8 @@ main PROC
 	push	OFFSET tryAgain
 	push	OFFSET plsEnter
 
-	;Get a value
-	call	readVal
-	;call	CrLf
-	mov		eax, validInt
-	call	WriteInt
-	call	CrLf
+	;Get 10 values
+	call	getNumbers
 	call	CrLf
 
 ;--------------------------------------
@@ -258,17 +258,21 @@ readVal PROC
 ; https://piazza.com/class/k83uhw9nnyd2y9?cid=278
 ;--------------------------------------
 ;; STACK FRAME CONTENTS
-; 
-;old ebp	|	ebp <-(Also esp)
-;return @	|	ebp + 4
-;plsEnter	|	ebp + 8
-;tryAgain	|	ebp + 12
-;userInput	|	ebp + 16
-;validInt	|	ebp + 20
-;isNeg		|	ebp + 24
-;plus		|	ebp + 28
-;minus		|	ebp + 32
-;emptyStr	|	ebp + 36
+;
+;old ebp	|	ebp
+;return@	|	ebp + 4
+;ebpfrmCall	|	ebp + 8
+;ret@frmCall|	ebp + 12
+;plsEnter	|	ebp + 16 
+;tryAgain	|	ebp + 20
+;userInput	|	ebp + 24
+;validInt	|	ebp + 28
+;isNeg		|	ebp + 32
+;plus		|	ebp + 36
+;minus		|	ebp + 40
+;emptyStr	|	ebp + 44
+;intArray	|	ebp + 48
+;arrayCount	|	ebp + 52
 ;--------------------------------------
 	;Skip over invalid unless jumped to
 	jmp		initRead
@@ -276,18 +280,18 @@ readVal PROC
 invalidEntry:	
 	;Input was invalid
 	;Clear the input string
-	INVOKE	Str_copy, [ebp + 36], [ebp + 16]
+	INVOKE	Str_copy, [ebp + 44], [ebp + 24]
 
 	;Initialize validInt, isNeg, clear direction
-	mov		edi, [ebp + 20]
+	mov		edi, [ebp + 28]
 	mov		eax, 0
 	mov		[edi], eax
-	mov		edi, [ebp + 24]
+	mov		edi, [ebp + 32]
 	mov		[edi], eax
 	cld
 
 	;Get input from user
-	getString [ebp + 16], [ebp + 12]
+	getString [ebp + 24], [ebp + 20]
 	call	CrLf
 
 	;skip inital prompt
@@ -295,22 +299,22 @@ invalidEntry:
 
 initRead:
 	;Get input from user
-	getString [ebp + 16], [ebp + 8]
+	getString [ebp + 24], [ebp + 16]
 	call	CrLf
 	
 	;Initialize validInt, isNeg, clear direction
 	mov		eax, 0
-	mov		edi, [ebp + 20]
+	mov		edi, [ebp + 28]
 	mov		[edi], eax
-	mov		edi, [ebp + 24]
+	mov		edi, [ebp + 32]
 	mov		[edi], eax
 	cld
 
 firstByte:
 	;Set esi, direction, reinit isNeg
-	mov		esi, [ebp + 16]
+	mov		esi, [ebp + 24]
 	mov		eax, 0
-	mov		edi, [ebp + 24]
+	mov		edi, [ebp + 32]
 	mov		[edi], eax
 
 	;Get the first byte, zero-extend
@@ -333,20 +337,20 @@ firstByte:
 	ja		invalidEntry
 
 	;Was a digit, proceeding
-	mov		edi, [ebp + 20]
+	mov		edi, [ebp + 28]
 	add		[edi], eax
 	jmp		keepReading
 
 negFound:
 	;set boolean and continue
-	mov		edi, [ebp + 24]
+	mov		edi, [ebp + 32]
 	mov		eax, 1
 	mov		[edi], eax
 	jmp		keepReading
 
 posFound:
 	;set boolean and continue
-	mov		edi, [ebp + 24]
+	mov		edi, [ebp + 32]
 	mov		eax, 0
 	mov		[edi], eax
 	jmp		keepReading
@@ -354,7 +358,7 @@ posFound:
 keepReading:
 	;Multiply to next dec place
 	mov		ebx, 10
-	mov		edi, [ebp + 20]
+	mov		edi, [ebp + 28]
 	mov		eax, [edi]
 	mul		ebx
 	mov		[edi], eax
@@ -375,13 +379,13 @@ keepReading:
 	ja		invalidEntry
 
 	;Is a digit, adding to running total
-	mov		edi, [ebp + 20]
+	mov		edi, [ebp + 28]
 	mov		ebx, [edi]
 	add		eax, ebx
 
 	;check overflow
 	jo		invalidEntry
-	mov		edi, [ebp + 20]
+	mov		edi, [ebp + 28]
 	mov		[edi], eax
 
 	;continue
@@ -390,7 +394,7 @@ keepReading:
 endRead:
 	;back off the last decimal escalation
 	mov		ebx, 10
-	mov		edi, [ebp + 20]
+	mov		edi, [ebp + 28]
 	mov		eax, [edi]
 	div		ebx
 	mov		[edi], eax
@@ -398,7 +402,7 @@ endRead:
 	;Valid int is now saved in validInt
 	;now we need to check sign
 
-	mov		edi, [ebp + 24]
+	mov		edi, [ebp + 32]
 	mov		eax, 1
 	cmp		[edi], eax
 	jz		complement
@@ -406,18 +410,108 @@ endRead:
 
 complement:
 	;get two's complement of validInt
-	mov		edi, [ebp + 20]
+	mov		edi, [ebp + 28]
 	mov		eax, [edi]
 	neg		eax
 	mov		[edi], eax
 
 endReadVal:
-	;reset ebp and clear stack
+	;reset ebp, registers and leave stack for next proc
 	pop		ebp
-	ret 32
-readVal	 ENDP
+	ret
+readVal ENDP
 
+;--------------------------------------
+getNumbers PROC
+;
+; Stores 10 valid ints from the user
 
+; Preconditions: large stack, see stack contents below
+; Postconditions: valid integer in validInt
+; Receives: large stack, see stack contents below
+; Registers changed: eax, ebx, ecx, edx, ebp, esp, esi
+;
+; Returns: valid integers in intArray
+;
+;--------------------------------------
+
+	;Save ebp and set the base pointer
+	push	ebp
+	mov		ebp, esp
+
+;--------------------------------------
+; CITATION: Concept learned from reference:
+; https://piazza.com/class/k83uhw9nnyd2y9?cid=278
+;--------------------------------------
+;; STACK FRAME CONTENTS
+; 
+;old ebp	|	ebp <-(Also esp)
+;return @	|	ebp + 4
+;plsEnter	|	ebp + 8
+;tryAgain	|	ebp + 12
+;userInput	|	ebp + 16
+;validInt	|	ebp + 20
+;isNeg		|	ebp + 24
+;plus		|	ebp + 28
+;minus		|	ebp + 32
+;emptyStr	|	ebp + 36
+;intArray	|	ebp + 40
+;arrayCount	|	ebp + 44
+;--------------------------------------
+	;initialize counter and edi
+	mov		ebx, [ebp + 44]
+	mov		eax, 10
+	mov		[ebx], eax
+
+getMore:
+	;Get next value
+	call	readVal
+
+	;get validInt
+	mov		esi, [ebp + 20]
+
+	;save to array and increment
+	;subtract arrayCount from 10
+	mov		eax, 10
+	mov		edi, [ebp + 44]
+	sub		eax, [edi]
+	mov		ebx, 4
+
+	;multiply by four
+	mul		ebx
+	mov		edi, [ebp + 40]
+
+	;add this offset to edi
+	add		edi, eax
+	mov		esi, [ebp + 20]
+	mov		eax, [esi]
+
+	;save valid int
+	mov		[edi], eax
+
+	;continue to fill array
+	mov		ebx, [ebp + 44]
+	mov		eax, 1
+	sub		[ebx], eax; sub 1 from arrayCount
+	mov		eax, 0
+	cmp		[ebx], eax
+	jnz		getMore
+
+	mov		ecx, 10
+	mov		esi, [ebp + 40]
+printEm:
+	;Write the integers in array
+	mov		eax, [esi]
+	call	WriteInt
+	add		esi, 4
+	call	CrLf
+	loop	printEm
+
+	;return ebp to initial value
+	pop		ebp
+
+	ret 40
+getNumbers ENDP
 
 ; (insert additional procedures here)
 
