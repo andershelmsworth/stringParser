@@ -280,18 +280,18 @@ readVal PROC
 invalidEntry:	
 	;Input was invalid
 	;Clear the input string
-	INVOKE	Str_copy, [ebp + 44], [ebp + 24]
+	INVOKE	Str_copy, [ebp + 44], [ebp + 24];emptyStr, userInput
 
 	;Initialize validInt, isNeg, clear direction
-	mov		edi, [ebp + 28]
+	mov		edi, [ebp + 28];validInt
 	mov		eax, 0
 	mov		[edi], eax
-	mov		edi, [ebp + 32]
+	mov		edi, [ebp + 32];isNeg
 	mov		[edi], eax
 	cld
 
 	;Get input from user
-	getString [ebp + 24], [ebp + 20]
+	getString [ebp + 24], [ebp + 20];userInput, tryAgain
 	call	CrLf
 
 	;skip inital prompt
@@ -299,23 +299,23 @@ invalidEntry:
 
 initRead:
 	;Get input from user
-	getString [ebp + 24], [ebp + 16]
+	getString [ebp + 24], [ebp + 16];userInput, plsEnter
 	call	CrLf
 	
 	;Initialize validInt, isNeg, clear direction
 	mov		eax, 0
-	mov		edi, [ebp + 28]
+	mov		edi, [ebp + 28];validInt
 	mov		[edi], eax
-	mov		edi, [ebp + 32]
+	mov		edi, [ebp + 32];isNeg
 	mov		[edi], eax
 	cld
 
 firstByte:
 	;Set esi, direction, reinit isNeg
-	mov		esi, [ebp + 24]
+	mov		esi, [ebp + 24];esi set to userInput@
 	mov		eax, 0
-	mov		edi, [ebp + 32]
-	mov		[edi], eax
+	mov		edi, [ebp + 32];isNeg
+	mov		[edi], eax;isNeg set to zero
 
 	;Get the first byte, zero-extend
 	lodsb
@@ -337,58 +337,48 @@ firstByte:
 	ja		invalidEntry
 
 	;Was a digit, proceeding
-	mov		edi, [ebp + 28]
-	add		[edi], eax
+	mov		edi, [ebp + 28];validInt
+	add		[edi], eax;first digit stored in validInt
 	jmp		keepReading
 
 negFound:
 	;set boolean and continue
-	mov		edi, [ebp + 32]
+	mov		edi, [ebp + 32];isNeg
 	mov		eax, 1
-	mov		[edi], eax
+	mov		[edi], eax;isNeg set to 1
 	jmp		keepReading
 
 posFound:
 	;set boolean and continue
-	mov		edi, [ebp + 32]
+	mov		edi, [ebp + 32];isNeg
 	mov		eax, 0
-	mov		[edi], eax
+	mov		[edi], eax;isNeg set to 0
 	jmp		keepReading
 
 keepReading:
 	;Check next byte before loading
-	mov		ecx, [esi + 4]
-	cmp		ecx, 0
-	jz		dontAdvTens
+	mov		cl, [esi]
+	cmp		cl, 0
+	jz		endRead
 
 	;Multiply to next dec place
 	mov		ebx, 10
-	mov		edi, [ebp + 28]
-	mov		eax, [edi]
-	mul		ebx
+	mov		edi, [ebp + 28];validInt
+	mov		eax, [edi];validInt literal in eax
+	mul		ebx;validInt * 10
 	jc		invalidEntry
 
 	;check overflow flag
 	neg		eax
-	and		eax, eax
 	jo		invalidEntry
 
 	;Wasn't enough to overflow, renagting
 	neg		eax
-	mov		[edi], eax
-
-dontAdvTens:
-	;save current number to validInt
-	mov		edi, [ebp + 28]
-	mov		[edi], eax
+	mov		[edi], eax;storing new *10'd int in validInt
 
 	;get the next byte, zero-extend
 	lodsb
 	movzx	eax, al
-
-	;Check if null char
-	cmp		eax, 0
-	jz		endRead
 
 	;checking this byte in range
 	sub		eax, 48
@@ -398,20 +388,32 @@ dontAdvTens:
 	ja		invalidEntry
 
 	;Is a digit, adding to running total
-	mov		edi, [ebp + 28]
-	mov		ebx, [edi]
-	add		eax, ebx
-	jc		invalidEntry
+	mov		edi, [ebp + 28];validInt
+	mov		ebx, [edi];validInt literal in ebx
+	neg		ebx;going for inverse first
+	sub		ebx, eax;subbing new digit from validInt
 
-	;check overflow
-	neg		eax
-	and		eax, eax
+	;checking overflow
 	jo		invalidEntry
 
-	;didn't overflow, renegating
-	neg		eax
-	mov		edi, [ebp + 28]
-	mov		[edi], eax
+	;checking sign boolean
+	mov		edi, [ebp + 32]
+	mov		ecx, [edi]
+	cmp		ecx, 0
+	jz		posOverflow
+	jmp		noOverflow
+
+posOverflow:
+	;checking if its 2147483648
+	sub		ebx, 1
+	jo		invalidEntry
+	add		ebx, 1
+
+noOverflow:
+	;didn't overflow, saving
+	neg		ebx;returning to pos
+	mov		edi, [ebp + 28];validInt
+	mov		[edi], ebx;storing new total in validInt
 
 	;continue
 	jmp		keepReading
@@ -419,18 +421,18 @@ dontAdvTens:
 endRead:
 	;Valid int is now saved in validInt
 	;now we need to check sign
-	mov		edi, [ebp + 32]
+	mov		edi, [ebp + 32];isNeg
 	mov		eax, 1
-	cmp		[edi], eax
+	cmp		[edi], eax;compare isNeg to 1
 	jz		complement
 	jmp		endReadVal
 
 complement:
 	;get two's complement of validInt
-	mov		edi, [ebp + 28]
-	mov		eax, [edi]
-	neg		eax
-	mov		[edi], eax
+	mov		edi, [ebp + 28];validInt
+	mov		eax, [edi];validInt is in eax
+	neg		eax;negated integer is in eax
+	mov		[edi], eax;negated integer is in validInt
 
 endReadVal:
 	;reset ebp, registers and leave stack for next proc
