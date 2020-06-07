@@ -79,6 +79,8 @@ plus		BYTE	"+"
 emptyStr	BYTE	33 DUP(0)
 intArray	SDWORD	10 DUP(?)
 arrayCount	DWORD	10
+zero		BYTE	0
+thirtyThree	DWORD	33
 
 .code
 ;--------------------------------------
@@ -97,7 +99,20 @@ main PROC
 ; Returns: none
 ;
 ;--------------------------------------
-; Used for error detection
+	;put values in all registers for error check
+	;mov		eax, 1
+	;mov		ebx, 2
+	;mov		ecx, 3
+	;mov		edx, 4
+	;mov		edi, 5
+	;mov		esi, 6
+	;mov		ebp, 7
+	;mov		esp, 8
+
+	;push all registers
+	pushad
+
+	;Used for error detection
 	push	47
 ;--------------------------------------
 ;INTRODUCTION SECTION
@@ -130,6 +145,8 @@ main PROC
 
 	;Push user input offsets in the reverse
 	;order that they are needed in the proc
+	push	OFFSET zero
+	push	OFFSET thirtyThree
 	push	OFFSET arrayCount
 	push	OFFSET intArray
 	push	OFFSET emptyStr
@@ -161,6 +178,9 @@ main PROC
 	call	WriteDec
 	call	CrLf
 
+	;returh registers
+	popad
+
 	exit	; exit to operating system
 main ENDP
 
@@ -187,12 +207,16 @@ introduction PROC
 	push	ebp
 	mov		ebp, esp
 
+	;Saving registers
+	pushad
+
 ;--------------------------------------
 ; CITATION: Concept learned from reference:
 ; https://piazza.com/class/k83uhw9nnyd2y9?cid=278
 ;--------------------------------------
 ;; STACK FRAME CONTENTS
-; 
+;
+;registers	|	ebp--
 ;old ebp	|	ebp <-(Also esp)
 ;return @	|	ebp + 4
 ;titleText	|	ebp + 8
@@ -226,6 +250,9 @@ introduction PROC
 	call	WriteString
 	call	CrLf
 
+	;return registers
+	popad
+
 	;Reset ebp -- esp never moved
 	pop		ebp
 
@@ -233,212 +260,6 @@ introduction PROC
 	ret		24
 
 introduction ENDP
-
-; (insert additional procedures here)
-;--------------------------------------
-readVal PROC
-;
-; Gets and validates a signed integer from the user.
-;
-; Preconditions: userInput, validInt on stack
-; Postconditions: valid integer in validInt
-; Receives: userInput string on stack
-; Registers changed: eax, ecx, edx, ebp, esp, esi
-;
-; Returns: valid integer in validInt
-;
-;--------------------------------------
-
-	;Save ebp and set the base pointer
-	push	ebp
-	mov		ebp, esp
-
-;--------------------------------------
-; CITATION: Concept learned from reference:
-; https://piazza.com/class/k83uhw9nnyd2y9?cid=278
-;--------------------------------------
-;; STACK FRAME CONTENTS
-;
-;old ebp	|	ebp
-;return@	|	ebp + 4
-;ebpfrmCall	|	ebp + 8
-;ret@frmCall|	ebp + 12
-;plsEnter	|	ebp + 16 
-;tryAgain	|	ebp + 20
-;userInput	|	ebp + 24
-;validInt	|	ebp + 28
-;isNeg		|	ebp + 32
-;plus		|	ebp + 36
-;minus		|	ebp + 40
-;emptyStr	|	ebp + 44
-;intArray	|	ebp + 48
-;arrayCount	|	ebp + 52
-;--------------------------------------
-	;Skip over invalid unless jumped to
-	jmp		initRead
-
-invalidEntry:	
-	;Input was invalid
-	;Clear the input string
-	INVOKE	Str_copy, [ebp + 44], [ebp + 24];emptyStr, userInput
-
-	;Initialize validInt, isNeg, clear direction
-	mov		edi, [ebp + 28];validInt
-	mov		eax, 0
-	mov		[edi], eax
-	mov		edi, [ebp + 32];isNeg
-	mov		[edi], eax
-	cld
-
-	;Get input from user
-	getString [ebp + 24], [ebp + 20];userInput, tryAgain
-	call	CrLf
-
-	;skip inital prompt
-	jmp		firstByte
-
-initRead:
-	;Get input from user
-	getString [ebp + 24], [ebp + 16];userInput, plsEnter
-	call	CrLf
-	
-	;Initialize validInt, isNeg, clear direction
-	mov		eax, 0
-	mov		edi, [ebp + 28];validInt
-	mov		[edi], eax
-	mov		edi, [ebp + 32];isNeg
-	mov		[edi], eax
-	cld
-
-firstByte:
-	;Set esi, direction, reinit isNeg
-	mov		esi, [ebp + 24];esi set to userInput@
-	mov		eax, 0
-	mov		edi, [ebp + 32];isNeg
-	mov		[edi], eax;isNeg set to zero
-
-	;Get the first byte, zero-extend
-	lodsb
-	movzx	eax, al
-
-	;Check to see if it's a negative sign
-	cmp		eax, 45
-	jz		negFound
-
-	;Check to see if it's a positive sign
-	cmp		eax, 43
-	jz		posFound
-
-	;No sign, checking this byte in range
-	sub		eax, 48
-	cmp		eax, 0; lower than zero?
-	jb		invalidEntry
-	cmp		eax, 9;greater than 9?
-	ja		invalidEntry
-
-	;Was a digit, proceeding
-	mov		edi, [ebp + 28];validInt
-	add		[edi], eax;first digit stored in validInt
-	jmp		keepReading
-
-negFound:
-	;set boolean and continue
-	mov		edi, [ebp + 32];isNeg
-	mov		eax, 1
-	mov		[edi], eax;isNeg set to 1
-	jmp		keepReading
-
-posFound:
-	;set boolean and continue
-	mov		edi, [ebp + 32];isNeg
-	mov		eax, 0
-	mov		[edi], eax;isNeg set to 0
-	jmp		keepReading
-
-keepReading:
-	;Check next byte before loading
-	mov		cl, [esi]
-	cmp		cl, 0
-	jz		endRead
-
-	;Multiply to next dec place
-	mov		ebx, 10
-	mov		edi, [ebp + 28];validInt
-	mov		eax, [edi];validInt literal in eax
-	mul		ebx;validInt * 10
-	jc		invalidEntry
-
-	;check overflow flag
-	neg		eax
-	jo		invalidEntry
-
-	;Wasn't enough to overflow, renagting
-	neg		eax
-	mov		[edi], eax;storing new *10'd int in validInt
-
-	;get the next byte, zero-extend
-	lodsb
-	movzx	eax, al
-
-	;checking this byte in range
-	sub		eax, 48
-	cmp		eax, 0; lower than zero?
-	jb		invalidEntry
-	cmp		eax, 9;greater than 9?
-	ja		invalidEntry
-
-	;Is a digit, adding to running total
-	mov		edi, [ebp + 28];validInt
-	mov		ebx, [edi];validInt literal in ebx
-	neg		ebx;going for inverse first
-	sub		ebx, eax;subbing new digit from validInt
-
-	;checking overflow
-	jo		invalidEntry
-
-	;checking sign boolean
-	mov		edi, [ebp + 32]
-	mov		ecx, [edi]
-	cmp		ecx, 0
-	jz		posOverflow
-	jmp		noOverflow
-
-posOverflow:
-	;checking if its 2147483648
-	sub		ebx, 1
-	jo		invalidEntry
-	add		ebx, 1
-
-noOverflow:
-	;didn't overflow, saving
-	neg		ebx;returning to pos
-	mov		edi, [ebp + 28];validInt
-	mov		[edi], ebx;storing new total in validInt
-
-	;continue
-	jmp		keepReading
-	
-endRead:
-	;Valid int is now saved in validInt
-	;now we need to check sign
-	mov		edi, [ebp + 32];isNeg
-	mov		eax, 1
-	cmp		[edi], eax;compare isNeg to 1
-	jz		complement
-	jmp		endReadVal
-
-complement:
-	;get two's complement of validInt
-	mov		edi, [ebp + 28];validInt
-	mov		eax, [edi];validInt is in eax
-	neg		eax;negated integer is in eax
-	mov		[edi], eax;negated integer is in validInt
-
-endReadVal:
-	;reset ebp, registers and leave stack for next proc
-	pop		ebp
-	ret
-readVal ENDP
 
 ;--------------------------------------
 getNumbers PROC
@@ -458,6 +279,9 @@ getNumbers PROC
 	push	ebp
 	mov		ebp, esp
 
+	;save registers
+	pushad
+
 ;--------------------------------------
 ; CITATION: Concept learned from reference:
 ; https://piazza.com/class/k83uhw9nnyd2y9?cid=278
@@ -476,6 +300,8 @@ getNumbers PROC
 ;emptyStr	|	ebp + 36
 ;intArray	|	ebp + 40
 ;arrayCount	|	ebp + 44
+;thirtyThree|	ebp + 48
+;zero		|	ebp + 52
 ;--------------------------------------
 	;initialize counter and edi
 	mov		ebx, [ebp + 44]
@@ -483,6 +309,20 @@ getNumbers PROC
 	mov		[ebx], eax
 
 getMore:
+	;push values for readVal
+	push	[ebp + 52]
+	push	[ebp + 48]
+	push	[ebp + 44]
+	push	[ebp + 40]
+	push	[ebp + 36]
+	push	[ebp + 32]
+	push	[ebp + 28]
+	push	[ebp + 24]
+	push	[ebp + 20]
+	push	[ebp + 16]
+	push	[ebp + 12]
+	push	[ebp + 8]
+
 	;Get next value
 	call	readVal
 
@@ -526,11 +366,284 @@ printEm:
 	call	CrLf
 	loop	printEm
 
+	;return registers
+	popad
+
 	;return ebp to initial value
 	pop		ebp
 
-	ret 40
+	ret 45
 getNumbers ENDP
+
+;--------------------------------------
+readVal PROC
+;
+; Gets and validates a signed integer from the user.
+;
+; Preconditions: userInput, validInt on stack
+; Postconditions: valid integer in validInt
+; Receives: userInput string on stack
+; Registers changed: eax, ecx, edx, ebp, esp, esi
+;
+; Returns: valid integer in validInt
+;
+;--------------------------------------
+
+	;Save ebp and set the base pointer
+	push	ebp
+	mov		ebp, esp
+
+	;save registers
+	pushad
+
+;--------------------------------------
+; CITATION: Concept learned from reference:
+; https://piazza.com/class/k83uhw9nnyd2y9?cid=278
+;--------------------------------------
+;; STACK FRAME CONTENTS
+;
+;registers	|	ebp--
+;old ebp	|	ebp
+;ret@		|	ebp + 4
+;plsEnter	|	ebp + 8 
+;tryAgain	|	ebp + 12
+;userInput	|	ebp + 16
+;validInt	|	ebp + 20
+;isNeg		|	ebp + 24
+;plus		|	ebp + 28
+;minus		|	ebp + 32
+;emptyStr	|	ebp + 36
+;intArray	|	ebp + 40
+;arrayCount	|	ebp + 44
+;thirtyThree|	ebp + 48
+;zero		|	ebp + 52
+;--------------------------------------
+	;Skip over invalid unless jumped to
+	jmp		initRead
+
+invalidEntry:	
+	;Input was invalid
+	;Clear the input string
+	push	[ebp + 52]
+	push	[ebp + 48]
+	push	[ebp + 16]
+	call	clearString
+
+	;Initialize validInt, isNeg, clear direction
+	mov		edi, [ebp + 20];validInt
+	mov		eax, 0
+	mov		[edi], eax
+	mov		edi, [ebp + 24];isNeg
+	mov		[edi], eax
+	cld
+
+	;Get input from user
+	getString [ebp + 16], [ebp + 12];userInput, tryAgain
+	call	CrLf
+
+	;skip inital prompt
+	jmp		firstByte
+
+initRead:
+	;Get input from user
+	getString [ebp + 16], [ebp + 8];userInput, plsEnter
+	call	CrLf
+	
+	;Initialize validInt, isNeg, clear direction
+	mov		eax, 0
+	mov		edi, [ebp + 20];validInt
+	mov		[edi], eax
+	mov		edi, [ebp + 24];isNeg
+	mov		[edi], eax
+	cld
+
+firstByte:
+	;Set esi, direction, reinit isNeg
+	mov		esi, [ebp + 16];esi set to userInput@
+	mov		eax, 0
+	mov		edi, [ebp + 24];isNeg
+	mov		[edi], eax;isNeg set to zero
+
+	;Get the first byte, zero-extend
+	lodsb
+	movzx	eax, al
+
+	;Check to see if it's a negative sign
+	cmp		eax, 45
+	jz		negFound
+
+	;Check to see if it's a positive sign
+	cmp		eax, 43
+	jz		posFound
+
+	;No sign, checking this byte in range
+	sub		eax, 48
+	cmp		eax, 0; lower than zero?
+	jb		invalidEntry
+	cmp		eax, 9;greater than 9?
+	ja		invalidEntry
+
+	;Was a digit, proceeding
+	mov		edi, [ebp + 20];validInt
+	add		[edi], eax;first digit stored in validInt
+	jmp		keepReading
+
+negFound:
+	;set boolean and continue
+	mov		edi, [ebp + 24];isNeg
+	mov		eax, 1
+	mov		[edi], eax;isNeg set to 1
+	jmp		keepReading
+
+posFound:
+	;set boolean and continue
+	mov		edi, [ebp + 24];isNeg
+	mov		eax, 0
+	mov		[edi], eax;isNeg set to 0
+	jmp		keepReading
+
+keepReading:
+	;Check next byte before loading
+	mov		cl, [esi]
+	cmp		cl, 0
+	jz		endRead
+
+	;Multiply to next dec place
+	mov		ebx, 10
+	mov		edi, [ebp + 20];validInt
+	mov		eax, [edi];validInt literal in eax
+	mul		ebx;validInt * 10
+	jc		invalidEntry
+
+	;check overflow flag
+	neg		eax
+	jo		invalidEntry
+
+	;Wasn't enough to overflow, renagting
+	neg		eax
+	mov		[edi], eax;storing new *10'd int in validInt
+
+	;get the next byte, zero-extend
+	lodsb
+	movzx	eax, al
+
+	;checking this byte in range
+	sub		eax, 48
+	cmp		eax, 0; lower than zero?
+	jb		invalidEntry
+	cmp		eax, 9;greater than 9?
+	ja		invalidEntry
+
+	;Is a digit, adding to running total
+	mov		edi, [ebp + 20];validInt
+	mov		ebx, [edi];validInt literal in ebx
+	neg		ebx;going for inverse first
+	sub		ebx, eax;subbing new digit from validInt
+
+	;checking overflow
+	jo		invalidEntry
+
+	;checking sign boolean
+	mov		edi, [ebp + 24]
+	mov		ecx, [edi]
+	cmp		ecx, 0
+	jz		posOverflow
+	jmp		noOverflow
+
+posOverflow:
+	;checking if its 2147483648
+	sub		ebx, 1
+	jo		invalidEntry
+	add		ebx, 1
+
+noOverflow:
+	;didn't overflow, saving
+	neg		ebx;returning to pos
+	mov		edi, [ebp + 20];validInt
+	mov		[edi], ebx;storing new total in validInt
+
+	;continue
+	jmp		keepReading
+	
+endRead:
+	;Valid int is now saved in validInt
+	;now we need to check sign
+	mov		edi, [ebp + 24];isNeg
+	mov		eax, 1
+	cmp		[edi], eax;compare isNeg to 1
+	jz		complement
+	jmp		endReadVal
+
+complement:
+	;get two's complement of validInt
+	mov		edi, [ebp + 20];validInt
+	mov		eax, [edi];validInt is in eax
+	neg		eax;negated integer is in eax
+	mov		[edi], eax;negated integer is in validInt
+
+endReadVal:
+	;reset ebp, registers and clean stack for next proc
+	popad
+	pop		ebp
+	ret 45
+readVal ENDP
+
+;--------------------------------------
+clearString PROC
+;
+; Blanks out the userInput string
+;
+; Preconditions: userInput, zero, thirtyThree on stack
+; Postconditions: userInput blanked out
+; Receives: userInput, zero, thirtyThree on stack
+; Registers changed: eax, ebx, ecx, edx, ebp, esp, esi
+;
+; Returns: none
+;
+;--------------------------------------
+
+	;Save ebp and set the base pointer
+	push	ebp
+	mov		ebp, esp
+
+	;save registers
+	pushad
+
+;--------------------------------------
+; CITATION: Concept learned from reference:
+; https://piazza.com/class/k83uhw9nnyd2y9?cid=278
+;--------------------------------------
+;; STACK FRAME CONTENTS
+;
+;registers	|	ebp--
+;old ebp	|	ebp
+;ret@		|	ebp + 4
+;userInput	|	ebp + 8
+;thirtyThree|	ebp + 12
+;zero		|	ebp + 16
+;--------------------------------------
+	;init counter
+	mov		esi, DWORD PTR [ebp + 12]
+	mov		ecx, [esi]
+
+	;init edi
+	mov		edi, [ebp + 8]
+
+keepBlanking:
+	;blank out next spot in string
+	mov		esi, [ebp + 16]
+	mov		al, BYTE PTR [esi]
+	stosb
+
+	;continue if needed
+	loop	keepBlanking
+
+	;reset ebp, registers and clean stack for next proc
+	popad
+	pop		ebp
+	ret 9
+clearString ENDP
+
 
 ; (insert additional procedures here)
 
