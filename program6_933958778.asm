@@ -356,12 +356,30 @@ posFound:
 	jmp		keepReading
 
 keepReading:
+	;Check next byte before loading
+	mov		ecx, [esi + 4]
+	cmp		ecx, 0
+	jz		dontAdvTens
+
 	;Multiply to next dec place
 	mov		ebx, 10
 	mov		edi, [ebp + 28]
 	mov		eax, [edi]
 	mul		ebx
 	jc		invalidEntry
+
+	;check overflow flag
+	neg		eax
+	and		eax, eax
+	jo		invalidEntry
+
+	;Wasn't enough to overflow, renagting
+	neg		eax
+	mov		[edi], eax
+
+dontAdvTens:
+	;save current number to validInt
+	mov		edi, [ebp + 28]
 	mov		[edi], eax
 
 	;get the next byte, zero-extend
@@ -383,9 +401,15 @@ keepReading:
 	mov		edi, [ebp + 28]
 	mov		ebx, [edi]
 	add		eax, ebx
+	jc		invalidEntry
 
 	;check overflow
-	jc		invalidEntry
+	neg		eax
+	and		eax, eax
+	jo		invalidEntry
+
+	;didn't overflow, renegating
+	neg		eax
 	mov		edi, [ebp + 28]
 	mov		[edi], eax
 
@@ -393,16 +417,8 @@ keepReading:
 	jmp		keepReading
 	
 endRead:
-	;back off the last decimal escalation
-	mov		ebx, 10
-	mov		edi, [ebp + 28]
-	mov		eax, [edi]
-	div		ebx
-	mov		[edi], eax
-
 	;Valid int is now saved in validInt
 	;now we need to check sign
-
 	mov		edi, [ebp + 32]
 	mov		eax, 1
 	cmp		[edi], eax
