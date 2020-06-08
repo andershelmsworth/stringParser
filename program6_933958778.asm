@@ -114,6 +114,9 @@ currentInt	DWORD	?
 tempString	BYTE	33 DUP(0)
 digits		DWORD	?
 
+;Values for displaying user input
+valsEntered	BYTE	"The values you entered were: ",0dh, 0ah, 0
+
 .code
 ;--------------------------------------
 main PROC
@@ -167,6 +170,11 @@ main PROC
 
 	;Push user input offsets in the reverse
 	;order that they are needed in the proc
+	push	OFFSET intOutput
+	push	OFFSET currentInt
+	push	OFFSET tempString
+	push	OFFSET digits
+	push	OFFSET valsEntered
 	push	OFFSET thirtyThree
 	push	OFFSET arrayCount
 	push	OFFSET intArray
@@ -180,18 +188,10 @@ main PROC
 	push	OFFSET plsEnter
 
 	;Get 10 values
-	;call	getNumbers
-	;call	CrLf
+	call	getNumbers
+	call	CrLf
 
-	call	readVal
-	push	OFFSET minus
-	push	OFFSET digits
-	push	OFFSET thirtyThree
-	push	OFFSET tempString
-	push	OFFSET currentInt
-	push	OFFSET validInt
-	push	OFFSET intOutput
-	call	writeVal
+	
 ;--------------------------------------
 ;FAREWELL SECTION
 ;farewell
@@ -265,8 +265,8 @@ introduction PROC
 	call	CrLf
 
 	;Specify EC option
-	displayString [ebp + 16]
-	call	CrLf
+	;displayString [ebp + 16]
+	;call	CrLf
 
 	;List program description
 	displayString [ebp + 20]
@@ -325,6 +325,11 @@ getNumbers PROC
 ;intArray	|	ebp + 40
 ;arrayCount	|	ebp + 44
 ;thirtyThree|	ebp + 48
+;valsEntered|	ebp + 52
+;digits		|	ebp + 56
+;tempString	|	ebp + 60
+;currentInt	|	ebp + 64
+;intOutput	|	ebp + 68
 ;--------------------------------------
 	;initialize counter and edi
 	mov		ebx, [ebp + 44]
@@ -383,15 +388,26 @@ getMore:
 	cmp		[ebx], eax
 	jnz		getMore
 
+	;init counter, set to start of intArray
 	mov		ecx, 10
 	mov		esi, [ebp + 40]
+
+	;Print prompt
+	displayString [ebp + 52]
+
 printEm:
-	;Write the integers in array
-	mov		eax, [esi]
-	push	eax
+	;Load stack for writeVal
+	push	[ebp + 32]
+	push	[ebp + 56]
+	push	[ebp + 48]
+	push	[ebp + 60]
+	push	[ebp + 64]
+	push	esi
+	push	[ebp + 68]
+
+	;print value, increment source
 	call	writeVal
 	add		esi, 4
-	call	CrLf
 	loop	printEm
 
 	;return registers
@@ -400,7 +416,7 @@ printEm:
 	;return ebp to initial value
 	pop		ebp
 
-	ret 44
+	ret 64
 getNumbers ENDP
 
 ;--------------------------------------
@@ -587,10 +603,10 @@ keepReading:
 
 posOverflow:
 	;checking if its 2147483648
-	sub		ebx, 1
-	jo		invalidEntry
-	add		ebx, 1
-	jo		invalidEntry
+	;sub		ebx, 1
+	;jo		invalidEntry
+	;add		ebx, 1
+	;jo		invalidEntry
 
 noOverflow:
 	;didn't overflow, saving
@@ -849,6 +865,46 @@ doneReversing:
 	pop		ebp
 	ret 28
 writeVal ENDP
+
+;--------------------------------------
+sumAndAvg PROC
+;
+; Calculates sum and average of integers in array
+;
+; Preconditions: intArray on stack
+; Postconditions: avg and sum output to screen
+; Receives: intArray on stack
+; Registers changed: eax, ecx, edx, ebp, esp, esi
+;
+; Returns: none
+;
+;--------------------------------------
+
+	;Save ebp and set the base pointer
+	push	ebp
+	mov		ebp, esp
+
+	;save registers
+	pushad
+
+;--------------------------------------
+; CITATION: Concept learned from reference:
+; https://piazza.com/class/k83uhw9nnyd2y9?cid=278
+;--------------------------------------
+;; STACK FRAME CONTENTS
+;
+;registers	|	ebp--
+;old ebp	|	ebp
+;ret@		|	ebp + 4
+;intArray	|	ebp + 8
+;--------------------------------------
+
+
+	;reset ebp, registers and clean stack for next proc
+	popad
+	pop		ebp
+	ret 8
+sumAndAvg ENDP
 
 
 ; (insert additional procedures here)
