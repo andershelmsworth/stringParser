@@ -184,6 +184,7 @@ main PROC
 	;call	CrLf
 
 	call	readVal
+	push	OFFSET minus
 	push	OFFSET digits
 	push	OFFSET thirtyThree
 	push	OFFSET tempString
@@ -720,6 +721,7 @@ writeVal PROC
 ;tempString	|	ebp + 20
 ;thirtyThree|	ebp + 24
 ;digits		|	ebp + 28
+;minus		|	ebp + 32
 ;--------------------------------------
 	;clear digits
 	mov		esi, [ebp + 28]
@@ -745,6 +747,24 @@ writeVal PROC
 	;init intOutput
 	mov		edi, [ebp + 8]
 
+	;check sign
+	mov		edx, [ebp + 12]
+	mov		eax, [edx]
+	sub		eax, 0
+	js		checkSign
+	jmp		keepDividing
+
+checkSign:
+	;is negative, so negating
+	neg		eax
+
+	;storing in currentInt
+	mov		edi, [ebp + 16]
+	mov		[edi], eax
+
+	;init intOutput
+	mov		edi, [ebp + 8]
+
 keepDividing:
 	;get currentInt, sign-extend
 	mov		esi, [ebp + 16]
@@ -753,7 +773,7 @@ keepDividing:
 
 	;divide by 10 move quotient to ecx and currentInt
 	mov		ebx, 10
-	idiv	ebx
+	div		ebx
 	mov		ecx, eax
 	mov		[esi], eax
 
@@ -761,6 +781,7 @@ keepDividing:
 	mov		eax, 0
 	mov		al, dl
 	add		al, 48;adjust to ascii
+	cld
 	stosb
 
 	;increment digits
@@ -778,6 +799,19 @@ keepDividing:
 	mov		edi, [ebp + 20];tempString
 	mov		esi, eax;intOutput end
 	sub		esi, 1
+
+	;check sign
+	mov		edx, [ebp + 12]
+	mov		eax, [edx]
+	sub		eax, 0
+	js		negOutput
+	jmp		keepReversing
+
+negOutput:
+	;Store minus sign first
+	mov		edx, [ebp + 32]
+	mov		eax, [edx]
+	stosb
 
 keepReversing:
 	;check end of string
@@ -813,7 +847,7 @@ doneReversing:
 	;reset ebp, registers and clean stack for next proc
 	popad
 	pop		ebp
-	ret 24
+	ret 28
 writeVal ENDP
 
 
