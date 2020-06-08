@@ -116,6 +116,10 @@ digits		DWORD	?
 
 ;Values for displaying user input
 valsEntered	BYTE	"The values you entered were: ",0dh, 0ah, 0
+sumIs		BYTE	"The sum of your entered values is: ",0dh, 0ah, 0
+avgIs		BYTE	"The average, rounded down, of your values is: ",0dh, 0ah, 0
+theSum		DWORD	?
+theAvg		DWORD	?
 
 .code
 ;--------------------------------------
@@ -191,7 +195,31 @@ main PROC
 	call	getNumbers
 	call	CrLf
 
-	
+;--------------------------------------
+;CALCULATION SECTION
+;sumAndAvg
+;
+;This section of the program calculates and outputs
+;the sum and average of the array
+;--------------------------------------
+	;Load stack for procedure
+	push	OFFSET theAvg
+	push	OFFSET theSum
+	push	OFFSET minus
+	push	OFFSET digits
+	push	OFFSET thirtyThree
+	push	OFFSET tempString
+	push	OFFSET currentInt
+	push	OFFSET validInt
+	push	OFFSET intOutput
+
+	push	OFFSET avgIs
+	push	OFFSET sumIs
+	push	OFFSET intArray
+
+	;Call averaging function
+	call	sumAndAvg
+
 ;--------------------------------------
 ;FAREWELL SECTION
 ;farewell
@@ -200,12 +228,13 @@ main PROC
 ;to the user.
 ;--------------------------------------
 	;push string address and call
-	;push	OFFSET seeya
-	;call	farewell
+	push	OFFSET seeya
+	call	farewell
+	call	CrLf
 
 	;Used for error detection
 	pop		eax
-	call	WriteDec
+	;call	WriteDec
 	call	CrLf
 
 	;returh registers
@@ -262,6 +291,7 @@ introduction PROC
 
 	;Introduce programmer
 	displayString [ebp + 12]
+	call	CrLf
 	call	CrLf
 
 	;Specify EC option
@@ -897,15 +927,148 @@ sumAndAvg PROC
 ;old ebp	|	ebp
 ;ret@		|	ebp + 4
 ;intArray	|	ebp + 8
+;sumIs		|	ebp + 12
+;avgIs		|	ebp + 16
+;intOutput	|	ebp + 20
+;validInt	|	ebp + 24
+;currentInt	|	ebp + 28
+;tempString	|	ebp + 32
+;thirtyThree|	ebp + 36
+;digits		|	ebp + 40
+;minus		|	ebp + 44
+;theSum		|	ebp + 48
+;theAvg		|	ebp + 52
 ;--------------------------------------
+	;Sum first
+	;Initialize eax and ecx and esi
+	mov		eax, 0
+	mov		ecx, 10
+	mov		esi, [ebp + 8]
 
+keepAdding:
+	;Get next int
+	mov		ebx, [esi]
+
+	;Add to running total
+	add		eax, ebx
+
+	;Increment source
+	add		esi, 4
+
+	;Continue if needed
+	loop	keepAdding
+
+	;Save sum
+	mov		edi, [ebp + 48]
+	mov		[edi], eax
+
+	;Display average
+	;Load stack for writeVal
+	push	[ebp + 44]
+	push	[ebp + 40]
+	push	[ebp + 36]
+	push	[ebp + 32]
+	push	[ebp + 28]
+	push	[ebp + 48];instead of validInt, theSum
+	push	[ebp + 20]
+
+	;Display prompt and write the value
+	displayString [ebp + 12]
+	call	writeVal
+	call	CrLf
+
+	;check sign of sum
+	mov		esi, [ebp + 48]
+	mov		eax, [esi]
+	add		eax, 0
+	js		negAvg
+	jmp		posAvg
+
+negAvg:
+	;prepare to divide sum by 10
+	mov		esi, [ebp + 48]
+	mov		eax, [esi]
+	cdq
+	mov		ebx, 10
+
+	;Compute avg using idiv, save
+	idiv	ebx
+	mov		edi, [ebp + 52]
+	mov		[edi], eax
+	jmp		doneSumAvg
+posAvg:
+	;prepare to divide sum by 10
+	mov		esi, [ebp + 48]
+	mov		eax, [esi]
+	cdq
+	mov		ebx, 10
+
+	;Compute avg using div, save
+	div		ebx
+	mov		edi, [ebp + 52]
+	mov		[edi], eax
+
+doneSumAvg:
+	;Load stack for writeVal
+	push	[ebp + 44]
+	push	[ebp + 40]
+	push	[ebp + 36]
+	push	[ebp + 32]
+	push	[ebp + 28]
+	push	[ebp + 52];instead of validInt, theAvg
+	push	[ebp + 20]
+
+	;Display prompt and write the value
+	displayString [ebp + 16]
+	call	writeVal
+	call	CrLf
 
 	;reset ebp, registers and clean stack for next proc
 	popad
 	pop		ebp
-	ret 8
+	ret 48
 sumAndAvg ENDP
 
+;--------------------------------------
+farewell PROC
+;
+; Bids farewell to the user
+;
+; Preconditions: seeya on stack
+; Postconditions: farewell output to screen
+; Receives: seeya on stack
+; Registers changed: eax, ecx, edx, ebp, esp, esi
+;
+; Returns: none
+;
+;--------------------------------------
+
+	;Save ebp and set the base pointer
+	push	ebp
+	mov		ebp, esp
+
+	;save registers
+	pushad
+
+;--------------------------------------
+; CITATION: Concept learned from reference:
+; https://piazza.com/class/k83uhw9nnyd2y9?cid=278
+;--------------------------------------
+;; STACK FRAME CONTENTS
+;
+;registers	|	ebp--
+;old ebp	|	ebp
+;ret@		|	ebp + 4
+;seeya		|	ebp + 8
+;--------------------------------------
+	;Print farewell string
+	displayString [ebp + 8]
+
+	;reset ebp, registers and clean stack for next proc
+	popad
+	pop		ebp
+	ret 4
+farewell ENDP
 
 ; (insert additional procedures here)
 
