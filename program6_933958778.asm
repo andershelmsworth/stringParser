@@ -35,13 +35,37 @@ getString MACRO inputAddress, prompt
 	pushad
 
 	;Prompt for user input
-	mov		edx, prompt
-	call	WriteString
+	displayString prompt
 
 	;Get the input from the user
 	mov		edx, inputAddress
 	mov		ecx, 32; ensure always null-terminated
 	call	ReadString
+
+	;Restore the registers
+	popad
+ENDM
+
+;--------------------------------------
+displayString MACRO outputAddress
+;   Outputs a supplied string to screen.
+;
+;	Preconditions: Do not use any of the 
+;	general purpose registers as arguments
+;
+;	Receives: Address of string to output
+;
+;	Returns: none
+;
+;
+;--------------------------------------
+
+	;Save the registers
+	pushad
+
+	;Prompt for user input
+	mov		edx, outputAddress
+	call	WriteString
 
 	;Restore the registers
 	popad
@@ -79,8 +103,16 @@ plus		BYTE	"+"
 emptyStr	BYTE	33 DUP(0)
 intArray	SDWORD	10 DUP(?)
 arrayCount	DWORD	10
+
+;Variables for clearing strings
 zero		BYTE	0
 thirtyThree	DWORD	33
+
+;Variables for writing values
+intOutput	BYTE	33 DUP(0)
+currentInt	DWORD	?
+tempString	BYTE	33 DUP(0)
+digits		DWORD	?
 
 .code
 ;--------------------------------------
@@ -99,16 +131,6 @@ main PROC
 ; Returns: none
 ;
 ;--------------------------------------
-	;put values in all registers for error check
-	;mov		eax, 1
-	;mov		ebx, 2
-	;mov		ecx, 3
-	;mov		edx, 4
-	;mov		edi, 5
-	;mov		esi, 6
-	;mov		ebp, 7
-	;mov		esp, 8
-
 	;push all registers
 	pushad
 
@@ -145,7 +167,6 @@ main PROC
 
 	;Push user input offsets in the reverse
 	;order that they are needed in the proc
-	push	OFFSET zero
 	push	OFFSET thirtyThree
 	push	OFFSET arrayCount
 	push	OFFSET intArray
@@ -159,9 +180,17 @@ main PROC
 	push	OFFSET plsEnter
 
 	;Get 10 values
-	call	getNumbers
-	call	CrLf
+	;call	getNumbers
+	;call	CrLf
 
+	call	readVal
+	push	OFFSET digits
+	push	OFFSET thirtyThree
+	push	OFFSET tempString
+	push	OFFSET currentInt
+	push	OFFSET validInt
+	push	OFFSET intOutput
+	call	writeVal
 ;--------------------------------------
 ;FAREWELL SECTION
 ;farewell
@@ -227,27 +256,21 @@ introduction PROC
 ;descripC	|	ebp + 28
 ;--------------------------------------
 	;Introduce title
-	mov		edx, [ebp + 8]
-	call	WriteString
+	displayString [ebp + 8]
 	call	CrLf
 
 	;Introduce programmer
-	mov		edx, [ebp + 12]
-	call	WriteString
+	displayString [ebp + 12]
 	call	CrLf
 
 	;Specify EC option
-	mov		edx, [ebp + 16]
-	call	WriteString
+	displayString [ebp + 16]
 	call	CrLf
 
 	;List program description
-	mov		edx, [ebp + 20]
-	call	WriteString
-	mov		edx, [ebp + 24]
-	call	WriteString
-	mov		edx, [ebp + 28]
-	call	WriteString
+	displayString [ebp + 20]
+	displayString [ebp + 24]
+	displayString [ebp + 28]
 	call	CrLf
 
 	;return registers
@@ -301,7 +324,6 @@ getNumbers PROC
 ;intArray	|	ebp + 40
 ;arrayCount	|	ebp + 44
 ;thirtyThree|	ebp + 48
-;zero		|	ebp + 52
 ;--------------------------------------
 	;initialize counter and edi
 	mov		ebx, [ebp + 44]
@@ -310,7 +332,6 @@ getNumbers PROC
 
 getMore:
 	;push values for readVal
-	push	[ebp + 52]
 	push	[ebp + 48]
 	push	[ebp + 44]
 	push	[ebp + 40]
@@ -325,6 +346,11 @@ getMore:
 
 	;Get next value
 	call	readVal
+
+	;Clear the input string
+	push	[ebp + 48]
+	push	[ebp + 16]
+	call	clearString
 
 	;get validInt
 	mov		esi, [ebp + 20]
@@ -361,7 +387,8 @@ getMore:
 printEm:
 	;Write the integers in array
 	mov		eax, [esi]
-	call	WriteInt
+	push	eax
+	call	writeVal
 	add		esi, 4
 	call	CrLf
 	loop	printEm
@@ -372,7 +399,7 @@ printEm:
 	;return ebp to initial value
 	pop		ebp
 
-	ret 45
+	ret 44
 getNumbers ENDP
 
 ;--------------------------------------
@@ -416,7 +443,6 @@ readVal PROC
 ;intArray	|	ebp + 40
 ;arrayCount	|	ebp + 44
 ;thirtyThree|	ebp + 48
-;zero		|	ebp + 52
 ;--------------------------------------
 	;Skip over invalid unless jumped to
 	jmp		initRead
@@ -424,7 +450,6 @@ readVal PROC
 invalidEntry:	
 	;Input was invalid
 	;Clear the input string
-	push	[ebp + 52]
 	push	[ebp + 48]
 	push	[ebp + 16]
 	call	clearString
@@ -512,15 +537,20 @@ keepReading:
 	mov		ebx, 10
 	mov		edi, [ebp + 20];validInt
 	mov		eax, [edi];validInt literal in eax
-	mul		ebx;validInt * 10
-	jc		invalidEntry
+	neg		eax;doing inverse first
+	imul		ebx;validInt * 10
+	jo		invalidEntry
+	neg		eax;back to positive
 
 	;check overflow flag
-	neg		eax
+	neg		eax;is negative
+	and		eax, eax
 	jo		invalidEntry
 
 	;Wasn't enough to overflow, renagting
-	neg		eax
+	neg		eax;back to positive
+	;and		eax, eax
+	;jo		invalidEntry
 	mov		[edi], eax;storing new *10'd int in validInt
 
 	;get the next byte, zero-extend
@@ -538,9 +568,13 @@ keepReading:
 	mov		edi, [ebp + 20];validInt
 	mov		ebx, [edi];validInt literal in ebx
 	neg		ebx;going for inverse first
+	and		ebx, ebx
+	jo		invalidEntry
 	sub		ebx, eax;subbing new digit from validInt
 
 	;checking overflow
+	jo		invalidEntry
+	and		ebx, ebx
 	jo		invalidEntry
 
 	;checking sign boolean
@@ -555,10 +589,14 @@ posOverflow:
 	sub		ebx, 1
 	jo		invalidEntry
 	add		ebx, 1
+	jo		invalidEntry
 
 noOverflow:
 	;didn't overflow, saving
 	neg		ebx;returning to pos
+	jo		invalidEntry
+	and		ebx, ebx
+	jo		invalidEntry
 	mov		edi, [ebp + 20];validInt
 	mov		[edi], ebx;storing new total in validInt
 
@@ -579,13 +617,16 @@ complement:
 	mov		edi, [ebp + 20];validInt
 	mov		eax, [edi];validInt is in eax
 	neg		eax;negated integer is in eax
+	jo		invalidEntry
+	and		eax, eax
+	jo		invalidEntry
 	mov		[edi], eax;negated integer is in validInt
 
 endReadVal:
 	;reset ebp, registers and clean stack for next proc
 	popad
 	pop		ebp
-	ret 45
+	ret 44
 readVal ENDP
 
 ;--------------------------------------
@@ -620,7 +661,6 @@ clearString PROC
 ;ret@		|	ebp + 4
 ;userInput	|	ebp + 8
 ;thirtyThree|	ebp + 12
-;zero		|	ebp + 16
 ;--------------------------------------
 	;init counter
 	mov		esi, DWORD PTR [ebp + 12]
@@ -631,8 +671,7 @@ clearString PROC
 
 keepBlanking:
 	;blank out next spot in string
-	mov		esi, [ebp + 16]
-	mov		al, BYTE PTR [esi]
+	mov		al, 0
 	stosb
 
 	;continue if needed
@@ -641,8 +680,141 @@ keepBlanking:
 	;reset ebp, registers and clean stack for next proc
 	popad
 	pop		ebp
-	ret 9
+	ret 8
 clearString ENDP
+
+;--------------------------------------
+writeVal PROC
+;
+; Converts an integer in memory to a string of digits,
+; then outputs that string to screen.
+;
+; Preconditions: intOutput on stack
+; Postconditions: string output to screen
+; Receives: intOutput on stack
+; Registers changed: eax, ecx, edx, ebp, esp, esi
+;
+; Returns: none
+;
+;--------------------------------------
+
+	;Save ebp and set the base pointer
+	push	ebp
+	mov		ebp, esp
+
+	;save registers
+	pushad
+
+;--------------------------------------
+; CITATION: Concept learned from reference:
+; https://piazza.com/class/k83uhw9nnyd2y9?cid=278
+;--------------------------------------
+;; STACK FRAME CONTENTS
+;
+;registers	|	ebp--
+;old ebp	|	ebp
+;ret@		|	ebp + 4
+;intOutput	|	ebp + 8 
+;validInt	|	ebp + 12
+;currentInt	|	ebp + 16
+;tempString	|	ebp + 20
+;thirtyThree|	ebp + 24
+;digits		|	ebp + 28
+;--------------------------------------
+	;clear digits
+	mov		esi, [ebp + 28]
+	mov		eax, 0
+	mov		[esi], eax
+
+	;clear intOutput
+	push	[ebp + 24]
+	push	[ebp + 8]
+	call	clearString
+
+	;clear tempString
+	push	[ebp + 24]
+	push	[ebp + 20]
+	call	clearString
+
+	;copy validInt to currentInt
+	mov		edi, [ebp + 16]
+	mov		esi, [ebp + 12]
+	mov		eax, [esi]
+	mov		[edi], eax
+
+	;init intOutput
+	mov		edi, [ebp + 8]
+
+keepDividing:
+	;get currentInt, sign-extend
+	mov		esi, [ebp + 16]
+	mov		eax, [esi]
+	cdq
+
+	;divide by 10 move quotient to ecx and currentInt
+	mov		ebx, 10
+	idiv	ebx
+	mov		ecx, eax
+	mov		[esi], eax
+
+	;remainder is in dl, saving to string
+	mov		eax, 0
+	mov		al, dl
+	add		al, 48;adjust to ascii
+	stosb
+
+	;increment digits
+	mov		edx, [ebp + 28]
+	mov		ebx, [edx]
+	add		ebx, 1
+	mov		[edx], ebx
+
+	;check if done
+	cmp		ecx, 0
+	jnz		keepDividing
+
+	;Reverse string
+	mov		eax, edi
+	mov		edi, [ebp + 20];tempString
+	mov		esi, eax;intOutput end
+	sub		esi, 1
+
+keepReversing:
+	;check end of string
+	mov		eax, [esi]
+	cmp		eax, 0
+	jz		doneReversing
+
+	;not end of string, move from source to dest
+	std;backwards from source
+	lodsb
+	cld;forwards from destination
+	stosb
+
+	;check to see if we're at the end
+	mov		edx, [ebp + 28]
+	mov		eax, [edx]
+	sub		eax, 1
+	mov		[edx], eax
+	cmp		eax, 0
+	jnz		keepReversing
+
+doneReversing:
+	;Done converting, time to display tempString
+	displayString [ebp + 20]
+	call	CrLf
+
+	;used for error detection
+	;mov		esi, [ebp + 12]
+	;mov		eax, [esi]
+	;call	WriteInt
+	;call	CrLf
+
+	;reset ebp, registers and clean stack for next proc
+	popad
+	pop		ebp
+	ret 24
+writeVal ENDP
 
 
 ; (insert additional procedures here)
