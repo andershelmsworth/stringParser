@@ -1,11 +1,11 @@
-Microsoft (R) Macro Assembler Version 14.24.28315.0	    06/07/20 20:36:41
+Microsoft (R) Macro Assembler Version 14.24.28315.0	    06/08/20 19:01:39
 7Strings to Signed Integers     (program6_933958778.asm	     Page 1 - 1
 
 
 				TITLE Strings to Signed Integers     (program6_933958778.asm)
 
 				; Author: Andrew Helmsworth
-				; Last Modified: 2020/06/01
+				; Last Modified: 2020/06/08
 				; OSU email address: helmswoa@oregonstate.edu
 				; Course number/section: 271-400
 				; Project Number: 6                Due Date: 2020/06/07
@@ -365,7 +365,6 @@ Microsoft (R) Macro Assembler Version 14.24.28315.0	    06/07/20 20:36:41
  000000A3  68 000002AD R		push	OFFSET currentInt
  000000A8  68 00000230 R		push	OFFSET validInt
  000000AD  68 0000028C R		push	OFFSET intOutput
-
  000000B2  68 0000031C R		push	OFFSET avgIs
  000000B7  68 000002F6 R		push	OFFSET sumIs
  000000BC  68 0000025B R		push	OFFSET intArray
@@ -458,7 +457,7 @@ Microsoft (R) Macro Assembler Version 14.24.28315.0	    06/07/20 20:36:41
  00000105  E8 00000000 E		call	CrLf
 
 					;Specify EC option
-					;displayString [ebp + 16]
+					;displayString [ebp + 16] (Decided against this)
 					;call	CrLf
 
 					;List program description
@@ -482,7 +481,7 @@ Microsoft (R) Macro Assembler Version 14.24.28315.0	    06/07/20 20:36:41
 					;return registers
  0000012D  61				popad
 
-					;Reset ebp -- esp never moved
+					;Reset ebp
  0000012E  5D				pop		ebp
 
 					;Return but also clear stack
@@ -633,10 +632,10 @@ Microsoft (R) Macro Assembler Version 14.24.28315.0	    06/07/20 20:36:41
 				;
 				; Gets and validates a signed integer from the user.
 				;
-				; Preconditions: userInput, validInt on stack
+				; Preconditions: Large stack, see comment block below
 				; Postconditions: valid integer in validInt
-				; Receives: userInput string on stack
-				; Registers changed: eax, ecx, edx, ebp, esp, esi
+				; Receives: Large stack, see comment block below
+				; Registers changed: eax, ebx, ecx, edx, ebp, esp, esi
 				;
 				; Returns: valid integer in validInt
 				;
@@ -933,9 +932,9 @@ Microsoft (R) Macro Assembler Version 14.24.28315.0	    06/07/20 20:36:41
 				; Converts an integer in memory to a string of digits,
 				; then outputs that string to screen.
 				;
-				; Preconditions: intOutput on stack
+				; Preconditions: intOutput &c on stack, see larger block below
 				; Postconditions: string output to screen
-				; Receives: intOutput on stack
+				; Receives: see comment block after ebp push/set
 				; Registers changed: eax, ecx, edx, ebp, esp, esi
 				;
 				; Returns: none
@@ -1102,10 +1101,10 @@ Microsoft (R) Macro Assembler Version 14.24.28315.0	    06/07/20 20:36:41
 				;
 				; Calculates sum and average of integers in array
 				;
-				; Preconditions: intArray on stack
+				; Preconditions: intArray &c on stack, see block below
 				; Postconditions: avg and sum output to screen
-				; Receives: intArray on stack
-				; Registers changed: eax, ecx, edx, ebp, esp, esi
+				; Receives: intArray &c on stack, see block below
+				; Registers changed: eax, ebx, ecx, edx, ebp, esp, esi
 				;
 				; Returns: none
 				;
@@ -1246,7 +1245,7 @@ Microsoft (R) Macro Assembler Version 14.24.28315.0	    06/07/20 20:36:41
 				; Preconditions: seeya on stack
 				; Postconditions: farewell output to screen
 				; Receives: seeya on stack
-				; Registers changed: eax, ecx, edx, ebp, esp, esi
+				; Registers changed: eax, edx, ebp, esp, esi
 				;
 				; Returns: none
 				;
@@ -1286,7 +1285,7 @@ Microsoft (R) Macro Assembler Version 14.24.28315.0	    06/07/20 20:36:41
 				; (insert additional procedures here)
 
 				END main
-Microsoft (R) Macro Assembler Version 14.24.28315.0	    06/07/20 20:36:41
+Microsoft (R) Macro Assembler Version 14.24.28315.0	    06/08/20 19:01:39
 7Strings to Signed Integers     (program6_933958778.asm	     Symbols 2 - 1
 
 

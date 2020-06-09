@@ -1,7 +1,7 @@
 TITLE Strings to Signed Integers     (program6_933958778.asm)
 
 ; Author: Andrew Helmsworth
-; Last Modified: 2020/06/01
+; Last Modified: 2020/06/08
 ; OSU email address: helmswoa@oregonstate.edu
 ; Course number/section: 271-400
 ; Project Number: 6                Due Date: 2020/06/07
@@ -63,7 +63,7 @@ displayString MACRO outputAddress
 	;Save the registers
 	pushad
 
-	;Prompt for user input
+	;Display string to the user
 	mov		edx, outputAddress
 	call	WriteString
 
@@ -212,7 +212,6 @@ main PROC
 	push	OFFSET currentInt
 	push	OFFSET validInt
 	push	OFFSET intOutput
-
 	push	OFFSET avgIs
 	push	OFFSET sumIs
 	push	OFFSET intArray
@@ -295,7 +294,7 @@ introduction PROC
 	call	CrLf
 
 	;Specify EC option
-	;displayString [ebp + 16]
+	;displayString [ebp + 16] (Decided against this)
 	;call	CrLf
 
 	;List program description
@@ -307,7 +306,7 @@ introduction PROC
 	;return registers
 	popad
 
-	;Reset ebp -- esp never moved
+	;Reset ebp
 	pop		ebp
 
 	;Return but also clear stack
@@ -454,10 +453,10 @@ readVal PROC
 ;
 ; Gets and validates a signed integer from the user.
 ;
-; Preconditions: userInput, validInt on stack
+; Preconditions: Large stack, see comment block below
 ; Postconditions: valid integer in validInt
-; Receives: userInput string on stack
-; Registers changed: eax, ecx, edx, ebp, esp, esi
+; Receives: Large stack, see comment block below
+; Registers changed: eax, ebx, ecx, edx, ebp, esp, esi
 ;
 ; Returns: valid integer in validInt
 ;
@@ -736,9 +735,9 @@ writeVal PROC
 ; Converts an integer in memory to a string of digits,
 ; then outputs that string to screen.
 ;
-; Preconditions: intOutput on stack
+; Preconditions: intOutput &c on stack, see larger block below
 ; Postconditions: string output to screen
-; Receives: intOutput on stack
+; Receives: see comment block after ebp push/set
 ; Registers changed: eax, ecx, edx, ebp, esp, esi
 ;
 ; Returns: none
@@ -901,10 +900,10 @@ sumAndAvg PROC
 ;
 ; Calculates sum and average of integers in array
 ;
-; Preconditions: intArray on stack
+; Preconditions: intArray &c on stack, see block below
 ; Postconditions: avg and sum output to screen
-; Receives: intArray on stack
-; Registers changed: eax, ecx, edx, ebp, esp, esi
+; Receives: intArray &c on stack, see block below
+; Registers changed: eax, ebx, ecx, edx, ebp, esp, esi
 ;
 ; Returns: none
 ;
@@ -1037,7 +1036,7 @@ farewell PROC
 ; Preconditions: seeya on stack
 ; Postconditions: farewell output to screen
 ; Receives: seeya on stack
-; Registers changed: eax, ecx, edx, ebp, esp, esi
+; Registers changed: eax, edx, ebp, esp, esi
 ;
 ; Returns: none
 ;
